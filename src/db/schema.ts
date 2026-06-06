@@ -59,7 +59,7 @@ function runMigrations(db: Database.Database): void {
     CREATE TABLE IF NOT EXISTS question_responses (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       attempt_id INTEGER NOT NULL REFERENCES quiz_attempts(id) ON DELETE CASCADE,
-      question_id INTEGER NOT NULL REFERENCES questions(id),
+      question_id INTEGER NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
       selected_answers TEXT NOT NULL,
       is_correct INTEGER NOT NULL,
       time_taken INTEGER NOT NULL
