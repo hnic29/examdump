@@ -64,7 +64,12 @@ function registerIpcHandlers() {
   });
 
   ipcMain.handle(IPC.INGEST_JSON, async (_e, json: string, name: string) => {
-    const parsed = JSON.parse(json) as { questions: ParsedQuestion[] };
+    let parsed: { questions: ParsedQuestion[] };
+    try {
+      parsed = JSON.parse(json) as { questions: ParsedQuestion[] };
+    } catch {
+      throw new Error('Invalid JSON: could not parse exam data. Make sure you copied the full JSON response from the AI.');
+    }
     const bank = createBank(name, 'ai-parsed');
     const count = insertQuestions(bank.id, parsed.questions);
     return { id: bank.id, questionCount: count };

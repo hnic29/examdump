@@ -1,5 +1,9 @@
 import { BrowserWindow, WebContentsView } from 'electron';
 
+// panel and resizeListener are module-level singletons — correct for a single-window app.
+// If multiple BrowserWindows are ever added (e.g., macOS multi-window), this must be
+// refactored to a Map<BrowserWindow, WebContentsView> per-window state.
+
 let panel: WebContentsView | null = null;
 let resizeListener: (() => void) | null = null;
 
