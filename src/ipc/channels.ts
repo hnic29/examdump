@@ -1,0 +1,18 @@
+export const IPC = {
+  IMPORT_FILE: 'import-file',
+  PARSE_FILE: 'parse-file',
+  INGEST_JSON: 'ingest-json',
+  LOAD_BANKS: 'load-banks',
+  LOAD_QUESTIONS: 'load-questions',
+  DELETE_BANK: 'delete-bank',
+  CREATE_ATTEMPT: 'create-attempt',
+  SAVE_RESPONSE: 'save-response',
+  COMPLETE_ATTEMPT: 'complete-attempt',
+  GET_HISTORY: 'get-history',
+  GET_RESPONSES: 'get-responses',
+  OPEN_PANEL: 'open-panel',
+  CLOSE_PANEL: 'close-panel',
+  GENERATE_PROMPT: 'generate-prompt',
+  COPY_TO_CLIPBOARD: 'copy-to-clipboard',
+  PANEL_STATE_CHANGED: 'panel-state-changed',
+} as const;

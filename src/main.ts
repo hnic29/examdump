@@ -1,56 +1,106 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, clipboard } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+import { initDb } from './db/schema';
+import { getAllBanks, createBank, deleteBank, getBankStats } from './db/banks';
+import { insertQuestions, getQuestionsForBank } from './db/questions';
+import { createAttempt, completeAttempt, getAttemptsForBank } from './db/attempts';
+import { saveResponse, getResponsesForAttempt } from './db/responses';
+import { extractText } from './parser/fileExtractor';
+import { parseExamDump } from './parser/ruleParser';
+import { generatePrompt } from './parser/promptGenerator';
+import { openPanel, closePanel } from './browser/panel';
+import { IPC } from './ipc/channels';
+import type { ParsedQuestion, CreateAttemptInput, SaveResponseInput, CompleteAttemptInput } from './types';
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (started) {
-  app.quit();
-}
+if (started) app.quit();
 
-const createWindow = () => {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+let mainWindow: BrowserWindow | null = null;
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
     },
   });
 
-  // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
-    mainWindow.loadFile(
-      path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
-    );
+    mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
+}
 
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
-};
-
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.on('ready', createWindow);
-
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+app.on('ready', () => {
+  initDb(path.join(app.getPath('userData'), 'examdump.db'));
+  registerIpcHandlers();
+  createWindow();
 });
 
-app.on('activate', () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
-});
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
+function registerIpcHandlers() {
+  ipcMain.handle(IPC.IMPORT_FILE, async () => {
+    if (!mainWindow) return null;
+    const result = await dialog.showOpenDialog(mainWindow, {
+      filters: [{ name: 'Exam Files', extensions: ['pdf', 'docx', 'doc', 'txt'] }],
+      properties: ['openFile'],
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    const filePath = result.filePaths[0];
+    const text = await extractText(filePath);
+    return { text, fileName: path.basename(filePath) };
+  });
+
+  ipcMain.handle(IPC.PARSE_FILE, async (_e, text: string) => {
+    return parseExamDump(text);
+  });
+
+  ipcMain.handle(IPC.INGEST_JSON, async (_e, json: string, name: string) => {
+    const parsed = JSON.parse(json) as { questions: ParsedQuestion[] };
+    const bank = createBank(name, 'ai-parsed');
+    const count = insertQuestions(bank.id, parsed.questions);
+    return { id: bank.id, questionCount: count };
+  });
+
+  ipcMain.handle(IPC.LOAD_BANKS, () => {
+    return getAllBanks().map(b => ({ ...b, ...getBankStats(b.id) }));
+  });
+
+  ipcMain.handle(IPC.LOAD_QUESTIONS, (_e, bankId: number) => getQuestionsForBank(bankId));
+
+  ipcMain.handle(IPC.DELETE_BANK, (_e, bankId: number) => deleteBank(bankId));
+
+  ipcMain.handle(IPC.CREATE_ATTEMPT, (_e, input: CreateAttemptInput) => createAttempt(input));
+
+  ipcMain.handle(IPC.SAVE_RESPONSE, (_e, input: SaveResponseInput) => saveResponse(input));
+
+  ipcMain.handle(IPC.COMPLETE_ATTEMPT, (_e, input: CompleteAttemptInput) => completeAttempt(input));
+
+  ipcMain.handle(IPC.GET_HISTORY, (_e, bankId: number) => getAttemptsForBank(bankId));
+
+  ipcMain.handle(IPC.GET_RESPONSES, (_e, attemptId: number) => getResponsesForAttempt(attemptId));
+
+  ipcMain.handle(IPC.OPEN_PANEL, (_e, url: string) => {
+    if (!mainWindow) return;
+    openPanel(mainWindow, url);
+    mainWindow.webContents.send(IPC.PANEL_STATE_CHANGED, true);
+  });
+
+  ipcMain.handle(IPC.CLOSE_PANEL, () => {
+    if (!mainWindow) return;
+    closePanel(mainWindow);
+    mainWindow.webContents.send(IPC.PANEL_STATE_CHANGED, false);
+  });
+
+  ipcMain.handle(IPC.GENERATE_PROMPT, (_e, text: string) => generatePrompt(text));
+
+  ipcMain.handle(IPC.COPY_TO_CLIPBOARD, (_e, text: string) => clipboard.writeText(text));
+}
