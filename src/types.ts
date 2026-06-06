@@ -15,6 +15,7 @@ export interface QuestionBank {
   id: number;
   name: string;
   sourceFile: string;
+  /** Unix timestamp in seconds */
   createdAt: number;
   questionCount: number;
 }
@@ -34,12 +35,15 @@ export interface Question {
 export interface QuizAttempt {
   id: number;
   bankId: number;
+  /** Unix timestamp in seconds */
   startedAt: number;
+  /** Unix timestamp in seconds; null until the attempt is completed */
   completedAt: number | null;
   timedMode: TimedMode;
   totalTimeLimit: number | null;
   perQuestionTimeLimit: number | null;
   showAnswerImmediately: boolean;
+  /** Percentage score 0–100, null until the attempt is completed */
   score: number | null;
   totalQuestions: number;
   correctCount: number;
@@ -58,6 +62,7 @@ export interface ParsedQuestion {
   question: string;
   type: QuestionType;
   options: QuestionOption[];
+  /** snake_case intentional — matches the AI prompt's JSON output format */
   correct_answers: string[];
   explanation: string | null;
   links: QuestionLink[] | null;
