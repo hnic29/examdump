@@ -11,7 +11,9 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
-    "test": "vitest run",
+    "pretest": "npm rebuild better-sqlite3",
+    "test": "vitest run --passWithNoTests",
+    "posttest": "npm run rebuild",
     "test:watch": "vitest",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
     "postinstall": "patch-package && electron-rebuild -f -w better-sqlite3"
