@@ -113,7 +113,10 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC.OPEN_PANEL, (_e, url: string) => {
     if (!mainWindow) return;
-    openPanel(mainWindow, url);
+    let parsed: URL;
+    try { parsed = new URL(url); } catch { return; }
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return;
+    openPanel(mainWindow, parsed.toString());
     mainWindow.webContents.send(IPC.PANEL_STATE_CHANGED, true);
   });
 

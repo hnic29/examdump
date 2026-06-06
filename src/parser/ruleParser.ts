@@ -76,8 +76,13 @@ function parseBlock(block: string): ParsedQuestion | null {
       const urlMatches = lines[idx].match(URL_RE);
       if (urlMatches) {
         const url = urlMatches[0];
-        const labelPart = lines[idx].replace(url, '').trim();
-        links.push({ text: labelPart || url, url });
+        try {
+          const parsed = new URL(url);
+          if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+            const labelPart = lines[idx].replace(url, '').trim();
+            links.push({ text: labelPart || url, url: parsed.toString() });
+          }
+        } catch { /* skip malformed URLs */ }
       }
     }
   }
