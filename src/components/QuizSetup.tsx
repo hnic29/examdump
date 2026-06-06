@@ -15,10 +15,16 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
   const [showAnswerImmediately, setShowAnswerImmediately] = useState(true);
 
   const handleStart = () => {
+    const totalLimit = (timedMode === 'total' || timedMode === 'both') ? parseInt(totalMinutes, 10) * 60 : null;
+    const perQLimit = (timedMode === 'per_question' || timedMode === 'both') ? parseInt(perQuestionSeconds, 10) : null;
+
+    if (totalLimit !== null && !Number.isFinite(totalLimit)) return;
+    if (perQLimit !== null && !Number.isFinite(perQLimit)) return;
+
     onStart({
       timedMode,
-      totalTimeLimit: (timedMode === 'total' || timedMode === 'both') ? parseInt(totalMinutes, 10) * 60 : null,
-      perQuestionTimeLimit: (timedMode === 'per_question' || timedMode === 'both') ? parseInt(perQuestionSeconds, 10) : null,
+      totalTimeLimit: totalLimit,
+      perQuestionTimeLimit: perQLimit,
       showAnswerImmediately,
     });
   };
