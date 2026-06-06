@@ -5,6 +5,9 @@ const ANSWER_RE = /^Answer:\s*([A-E](?:,\s*[A-E])*)/i;
 const EXPLANATION_RE = /^Explanation:\s*/i;
 const LINKS_HEADER_RE = /^Authoritative Links/i;
 const URL_RE = /https?:\/\/[^\s]+/g;
+const TRUE_RE = /^true\.?$/i;
+const FALSE_RE = /^false\.?$/i;
+const MULTI_SELECT_RE = /select\s+(all|two|three|\d+)|choose\s+(all|two|three|\d+)/i;
 
 export function parseExamDump(text: string): ParseResult {
   const blocks = text.split(/(?=Question:\s*\d+)/i).map(b => b.trim()).filter(Boolean);
@@ -82,10 +85,10 @@ function parseBlock(block: string): ParsedQuestion | null {
   // Determine question type
   let type: QuestionType = 'multiple_choice';
   if (options.length === 2 &&
-      options[0].text.toLowerCase() === 'true' &&
-      options[1].text.toLowerCase() === 'false') {
+      TRUE_RE.test(options[0].text.trim()) &&
+      FALSE_RE.test(options[1].text.trim())) {
     type = 'true_false';
-  } else if (correctAnswers.length > 1) {
+  } else if (correctAnswers.length > 1 || MULTI_SELECT_RE.test(questionText)) {
     type = 'multi_select';
   }
 

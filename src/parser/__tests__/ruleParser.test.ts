@@ -77,4 +77,25 @@ Answer: B`;
     expect(result.success).toBe(false);
     expect(result.confidence).toBeLessThan(0.5);
   });
+
+  it('detects true_false with trailing punctuation', () => {
+    const text = `Question: 1 Test |
+Encryption is always symmetric.
+A. True.
+B. False.
+Answer: B`;
+    const result = parseExamDump(text);
+    expect(result.questions[0].type).toBe('true_false');
+  });
+
+  it('detects multi_select from question text when no answer line', () => {
+    const text = `Question: 1 Test |
+Select ALL valid IP address classes.
+A. Class A
+B. Class B
+C. Class C
+D. Class D`;
+    const result = parseExamDump(text);
+    expect(result.questions[0].type).toBe('multi_select');
+  });
 });
