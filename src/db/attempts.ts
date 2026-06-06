@@ -15,7 +15,7 @@ function toAttempt(r: AttemptRow): QuizAttempt {
 
 export function createAttempt(input: CreateAttemptInput): number {
   const result = getDb().prepare('INSERT INTO quiz_attempts (bank_id, started_at, timed_mode, total_time_limit, per_question_time_limit, show_answer_immediately, total_questions, correct_count) VALUES (?,?,?,?,?,?,?,0)').run(input.bankId, Math.floor(Date.now() / 1000), input.timedMode, input.totalTimeLimit ?? null, input.perQuestionTimeLimit ?? null, input.showAnswerImmediately ? 1 : 0, input.totalQuestions);
-  return result.lastInsertRowid as number;
+  return Number(result.lastInsertRowid);
 }
 
 export function completeAttempt(input: CompleteAttemptInput): void {

@@ -21,8 +21,8 @@ export function insertQuestions(bankId: number, parsed: ParsedQuestion[]): numbe
   const stmt = db.prepare('INSERT INTO questions (bank_id, question_text, question_type, options, correct_answers, explanation, links, order_index) VALUES (?,?,?,?,?,?,?,?)');
   db.transaction((qs: ParsedQuestion[]) => {
     qs.forEach((q, i) => stmt.run(bankId, q.question, q.type, JSON.stringify(q.options), JSON.stringify(q.correct_answers), q.explanation ?? null, q.links ? JSON.stringify(q.links) : null, i));
+    updateBankQuestionCount(bankId, qs.length);
   })(parsed);
-  updateBankQuestionCount(bankId, parsed.length);
   return parsed.length;
 }
 
