@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, dialog, clipboard } from 'electron';
 import path from 'node:path';
+import fs from 'node:fs/promises';
 import started from 'electron-squirrel-startup';
 import { initDb } from './db/schema';
 import { getAllBanks, createBank, deleteBank, getBankStats } from './db/banks';
@@ -57,13 +58,19 @@ function registerIpcHandlers() {
   ipcMain.handle(IPC.IMPORT_FILE, async () => {
     if (!mainWindow) return null;
     const result = await dialog.showOpenDialog(mainWindow, {
-      filters: [{ name: 'Exam Files', extensions: ['pdf', 'docx', 'doc', 'txt'] }],
+      filters: [{ name: 'Exam Files', extensions: ['pdf', 'docx', 'doc', 'txt', 'json'] }],
       properties: ['openFile'],
     });
     if (result.canceled || result.filePaths.length === 0) return null;
     const filePath = result.filePaths[0];
+    const fileName = path.basename(filePath);
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext === '.json') {
+      const text = await fs.readFile(filePath, 'utf-8');
+      return { text, fileName, isJson: true };
+    }
     const text = await extractText(filePath);
-    return { text, fileName: path.basename(filePath) };
+    return { text, fileName, isJson: false };
   });
 
   ipcMain.handle(IPC.PARSE_FILE, async (_e, text: string) => {
@@ -110,6 +117,28 @@ function registerIpcHandlers() {
   ipcMain.handle(IPC.GET_HISTORY, (_e, bankId: number) => getAttemptsForBank(requirePosInt(bankId, 'bankId')));
 
   ipcMain.handle(IPC.GET_RESPONSES, (_e, attemptId: number) => getResponsesForAttempt(requirePosInt(attemptId, 'attemptId')));
+
+  ipcMain.handle(IPC.EXPORT_BANK, async (_e, bankId: number) => {
+    if (!mainWindow) return;
+    requirePosInt(bankId, 'bankId');
+    const questions = getQuestionsForBank(bankId);
+    const exported = {
+      questions: questions.map(q => ({
+        question: q.questionText,
+        type: q.questionType,
+        options: q.options,
+        correct_answers: q.correctAnswers,
+        explanation: q.explanation,
+        links: q.links,
+      })),
+    };
+    const result = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: `examdump-bank-${bankId}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    });
+    if (result.canceled || !result.filePath) return;
+    await fs.writeFile(result.filePath, JSON.stringify(exported, null, 2), 'utf-8');
+  });
 
   ipcMain.handle(IPC.OPEN_PANEL, (_e, url: string) => {
     if (!mainWindow) return;

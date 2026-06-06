@@ -21,22 +21,43 @@ export function ImportFlow({ onComplete, onCancel }: Props) {
   const handlePickFile = async () => {
     setError('');
     setStep('parsing');
-    const result = await window.electronAPI.importFile();
-    if (!result) {
+    try {
+      const result = await window.electronAPI.importFile();
+      if (!result) {
+        setStep('idle');
+        return;
+      }
+      setFileName(result.fileName);
+      setExtractedText(result.text);
+      setBankName(result.fileName.replace(/\.[^.]+$/, ''));
+
+      // JSON file — validate and go straight to preview
+      if (result.isJson) {
+        const parsed = JSON.parse(result.text) as { questions: unknown[] };
+        if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+          setError('JSON file must have a "questions" array with at least one item.');
+          setStep('idle');
+          return;
+        }
+        setParsedQuestions(parsed.questions as ParsedQuestion[]);
+        setStep('preview');
+        return;
+      }
+
+      // PDF / DOCX / TXT — run rule-based parser
+      const parsed = await window.electronAPI.parseFile(result.text);
+      if (parsed.success && parsed.questions.length > 0) {
+        setParsedQuestions(parsed.questions);
+        setStep('preview');
+      } else {
+        const p = await window.electronAPI.generatePrompt(result.text);
+        setPrompt(p);
+        setStep('ai-fallback');
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error reading file.';
+      setError(msg);
       setStep('idle');
-      return;
-    }
-    setFileName(result.fileName);
-    setExtractedText(result.text);
-    setBankName(result.fileName.replace(/\.[^.]+$/, ''));
-    const parsed = await window.electronAPI.parseFile(result.text);
-    if (parsed.success && parsed.questions.length > 0) {
-      setParsedQuestions(parsed.questions);
-      setStep('preview');
-    } else {
-      const p = await window.electronAPI.generatePrompt(result.text);
-      setPrompt(p);
-      setStep('ai-fallback');
     }
   };
 
@@ -85,7 +106,7 @@ export function ImportFlow({ onComplete, onCancel }: Props) {
       <div style={{ maxWidth: 500 }}>
         <h2 style={{ marginBottom: 16 }}>Import Question Bank</h2>
         <p style={{ color: '#8b9cb0', fontSize: 13, marginBottom: 20 }}>
-          Supported formats: PDF, DOCX, TXT
+          Supported formats: PDF, DOCX, TXT, JSON (previously exported bank)
         </p>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn btn-primary" onClick={handlePickFile} disabled={step === 'parsing'}>

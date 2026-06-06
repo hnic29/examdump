@@ -6,6 +6,7 @@ interface Props {
   selectedBankId: number | null;
   onStartQuiz: (bankId: number) => void;
   onDeleteBank: (bankId: number) => void;
+  onExportBank: (bankId: number) => void;
 }
 
 function formatDate(ts: number | null): string {
@@ -13,7 +14,7 @@ function formatDate(ts: number | null): string {
   return new Date(ts * 1000).toLocaleDateString();
 }
 
-export function Library({ banks, selectedBankId, onStartQuiz, onDeleteBank }: Props) {
+export function Library({ banks, selectedBankId, onStartQuiz, onDeleteBank, onExportBank }: Props) {
   const bank = banks.find(b => b.id === selectedBankId) ?? null;
 
   if (!bank) {
@@ -50,6 +51,13 @@ export function Library({ banks, selectedBankId, onStartQuiz, onDeleteBank }: Pr
           disabled={bank.questionCount === 0}
         >
           ▶ Start Quiz
+        </button>
+        <button
+          className="btn btn-secondary"
+          onClick={() => onExportBank(bank.id)}
+          disabled={bank.questionCount === 0}
+        >
+          💾 Export as JSON
         </button>
         <button
           className="btn btn-danger"

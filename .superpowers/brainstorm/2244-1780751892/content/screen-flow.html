@@ -1,0 +1,125 @@
+<h2>Screen Flow</h2>
+<p class="subtitle">Every screen in the app and how they connect</p>
+
+<style>
+.flow { display: flex; flex-direction: column; gap: 10px; max-width: 780px; margin: 0 auto; }
+.row { display: flex; gap: 10px; align-items: center; justify-content: center; }
+.screen { background: #1e2535; border: 1px solid #2d3a52; border-radius: 8px; padding: 10px 14px; min-width: 130px; text-align: center; }
+.screen .name { color: #e0e0e0; font-size: 12px; font-weight: 600; }
+.screen .desc { color: #8b9cb0; font-size: 10px; margin-top: 3px; }
+.screen.active { border-color: #2196f3; }
+.screen.modal { border-color: #9c27b0; border-style: dashed; }
+.screen.panel { border-color: #ff9800; border-style: dashed; }
+.arrow { color: #4a5568; font-size: 18px; flex-shrink: 0; }
+.arrow-down { text-align: center; color: #4a5568; font-size: 18px; }
+.label { background: #2196f320; color: #64b5f6; font-size: 9px; padding: 2px 6px; border-radius: 3px; margin-top: 4px; display: inline-block; }
+.label.purple { background: #9c27b020; color: #ce93d8; }
+.label.orange { background: #ff980020; color: #ffcc80; }
+.legend { display: flex; gap: 16px; justify-content: center; margin-bottom: 12px; font-size: 10px; color: #8b9cb0; }
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; border: 1px solid; }
+</style>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="border-color:#2196f3;background:#2196f320"></div> Main screen</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:#9c27b0;background:#9c27b020;border-style:dashed"></div> Modal / overlay</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:#ff9800;background:#ff980020;border-style:dashed"></div> Floating panel</div>
+</div>
+
+<div class="flow">
+
+  <!-- Row 1: Library (home) -->
+  <div class="row">
+    <div class="screen active">
+      <div class="name">📚 Library</div>
+      <div class="desc">Sidebar: list of banks<br>Main: bank details + Start</div>
+      <span class="label">Default screen</span>
+    </div>
+  </div>
+
+  <!-- Arrow down to two branches -->
+  <div class="row" style="gap:80px">
+    <div style="text-align:center">
+      <div class="arrow-down">↓</div>
+      <div style="color:#8b9cb0;font-size:10px">Import new bank</div>
+    </div>
+    <div style="text-align:center">
+      <div class="arrow-down">↓</div>
+      <div style="color:#8b9cb0;font-size:10px">Click "Start Quiz"</div>
+    </div>
+  </div>
+
+  <!-- Row 2: Import + Quiz Setup side by side -->
+  <div class="row" style="gap:40px;align-items:flex-start">
+
+    <!-- Import branch -->
+    <div style="display:flex;flex-direction:column;gap:8px;align-items:center">
+      <div class="screen active">
+        <div class="name">📥 Import</div>
+        <div class="desc">Drop file or browse<br>Extracts text preview</div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="screen modal">
+        <div class="name">🔍 Parse Check</div>
+        <div class="desc">Is format recognized?<br>If yes → save directly<br>If no → show prompt</div>
+        <span class="label purple">Modal</span>
+      </div>
+      <div class="arrow-down">↓ if unrecognized</div>
+      <div class="screen panel">
+        <div class="name">🤖 AI Browser</div>
+        <div class="desc">Embedded Claude / ChatGPT<br>/ Gemini panel<br>Prompt pre-generated<br>User pastes → gets JSON</div>
+        <span class="label orange">Floating panel</span>
+      </div>
+      <div class="arrow-down">↓ paste JSON back</div>
+      <div class="screen modal">
+        <div class="name">✅ Confirm Import</div>
+        <div class="desc">Preview parsed questions<br>Name the bank → Save</div>
+        <span class="label purple">Modal</span>
+      </div>
+      <div class="arrow-down">↓ saved</div>
+      <div style="color:#64b5f6;font-size:10px;text-align:center">→ back to Library</div>
+    </div>
+
+    <!-- Quiz branch -->
+    <div style="display:flex;flex-direction:column;gap:8px;align-items:center">
+      <div class="screen modal">
+        <div class="name">⚙️ Quiz Setup</div>
+        <div class="desc">Timed? (none / total /<br>per-question / both)<br>Set duration(s)<br>Show answers immediately?</div>
+        <span class="label purple">Modal</span>
+      </div>
+      <div class="arrow-down">↓ Start</div>
+      <div class="screen active">
+        <div class="name">❓ Active Quiz</div>
+        <div class="desc">Question + options<br>Timer (if enabled)<br>Progress: 12 / 50<br>Submit button</div>
+        <span class="label">Main screen</span>
+      </div>
+      <div class="arrow-down">↓ submit answer</div>
+      <div class="screen modal">
+        <div class="name">💬 Answer Feedback</div>
+        <div class="desc">✓ Correct / ✗ Incorrect<br>Explanation shown<br>Next → button</div>
+        <span class="label purple">Modal (if opted in)</span>
+      </div>
+      <div class="arrow-down">↓ all questions done</div>
+      <div class="screen active">
+        <div class="name">🏆 Results</div>
+        <div class="desc">Score % · Correct / Total<br>Time taken<br>Review Answers · Retake</div>
+        <span class="label">Main screen</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- History always accessible from sidebar -->
+  <div style="margin-top:8px;border-top:1px solid #2d3a52;padding-top:12px">
+    <div class="row">
+      <div class="screen active">
+        <div class="name">📊 History</div>
+        <div class="desc">All attempts per bank<br>Score over time chart<br>Accessible from sidebar</div>
+        <span class="label">Main screen</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px">Check <strong>http://localhost:63664</strong> — does this flow cover everything you need?</p>

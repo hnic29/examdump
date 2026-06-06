@@ -52,6 +52,7 @@ export function App() {
               refreshBanks();
               setView({ screen: 'library', selectedBankId: null });
             }}
+            onExportBank={(bankId) => window.electronAPI.exportBank(bankId)}
           />
         )}
         {view.screen === 'import' && (

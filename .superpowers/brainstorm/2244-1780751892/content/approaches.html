@@ -1,0 +1,90 @@
+<h2>Three Approaches to the App Structure</h2>
+<p class="subtitle">Each shapes how you move through the app — pick the one that feels right</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f1117;padding:12px;border-radius:6px;font-family:monospace;font-size:11px;color:#8b9cb0;line-height:1.6">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div style="background:#1e2535;color:#64b5f6;padding:3px 10px;border-radius:4px;font-size:10px">📚 Library</div>
+        <div style="background:#1e2535;color:#aaa;padding:3px 10px;border-radius:4px;font-size:10px">📊 History</div>
+        <div style="background:#1e2535;color:#aaa;padding:3px 10px;border-radius:4px;font-size:10px">🤖 AI Helper</div>
+      </div>
+      <div style="background:#1e2535;border-radius:6px;padding:10px">
+        <div style="color:#e0e0e0;font-size:11px;margin-bottom:6px">📂 Network+ Study Guide</div>
+        <div style="color:#e0e0e0;font-size:11px;margin-bottom:6px">📂 AWS Solutions Architect</div>
+        <div style="color:#e0e0e0;font-size:11px;margin-bottom:6px">📂 CompTIA Security+</div>
+        <div style="margin-top:8px;background:#2196f3;color:#fff;padding:4px 10px;border-radius:4px;font-size:10px;display:inline-block">+ Import New</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Tab-Based Navigation</h3>
+      <p>Tabs across the top: Library, History, AI Helper. Click a bank to start a quiz. Simple, familiar, no nesting.</p>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>Pros</h4><ul><li>Easy to find anything</li><li>AI helper always one click away</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Less visual hierarchy</li><li>Tab bar takes vertical space</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f1117;padding:12px;border-radius:6px;font-size:11px;color:#8b9cb0;display:flex;gap:8px;min-height:100px">
+      <div style="background:#1a1f2e;border-radius:6px;padding:8px;width:110px;flex-shrink:0">
+        <div style="color:#64b5f6;font-size:10px;margin-bottom:6px;font-weight:bold">QUESTION BANKS</div>
+        <div style="color:#e0e0e0;font-size:10px;margin-bottom:4px;padding:3px 5px;background:#2196f3;border-radius:3px">Network+</div>
+        <div style="color:#aaa;font-size:10px;margin-bottom:4px;padding:3px 5px">AWS SAA</div>
+        <div style="color:#aaa;font-size:10px;margin-bottom:4px;padding:3px 5px">Security+</div>
+        <div style="margin-top:8px;color:#64b5f6;font-size:10px">+ Import</div>
+        <div style="margin-top:6px;color:#64b5f6;font-size:10px">📊 History</div>
+        <div style="margin-top:4px;color:#64b5f6;font-size:10px">🤖 AI Helper</div>
+      </div>
+      <div style="background:#1e2535;border-radius:6px;padding:8px;flex:1">
+        <div style="color:#e0e0e0;font-size:10px;margin-bottom:4px;font-weight:bold">Network+ — 245 questions</div>
+        <div style="color:#aaa;font-size:10px;margin-bottom:6px">Best score: 87% · Last taken: 2 days ago</div>
+        <div style="background:#2196f3;color:#fff;padding:3px 8px;border-radius:3px;font-size:10px;display:inline-block">▶ Start Quiz</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Sidebar + Main Panel (Recommended)</h3>
+      <p>Persistent left sidebar lists your banks. Main area shows bank details, active quiz, or results. Always oriented, never lost.</p>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>Pros</h4><ul><li>Always see your banks</li><li>Clean during a quiz</li><li>Scales well as you add banks</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Sidebar narrows quiz area slightly</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f1117;padding:12px;border-radius:6px;font-size:11px;color:#8b9cb0">
+      <div style="text-align:center;margin-bottom:8px">
+        <div style="color:#e0e0e0;font-size:12px;font-weight:bold;margin-bottom:4px">ExamDump</div>
+        <div style="color:#aaa;font-size:10px">What would you like to do?</div>
+      </div>
+      <div style="display:flex;gap:6px;justify-content:center">
+        <div style="background:#1e2535;border-radius:6px;padding:8px 10px;text-align:center">
+          <div style="font-size:16px">▶</div>
+          <div style="color:#e0e0e0;font-size:10px;margin-top:3px">Take a Quiz</div>
+        </div>
+        <div style="background:#1e2535;border-radius:6px;padding:8px 10px;text-align:center">
+          <div style="font-size:16px">📥</div>
+          <div style="color:#e0e0e0;font-size:10px;margin-top:3px">Import File</div>
+        </div>
+        <div style="background:#1e2535;border-radius:6px;padding:8px 10px;text-align:center">
+          <div style="font-size:16px">📊</div>
+          <div style="color:#e0e0e0;font-size:10px;margin-top:3px">My Scores</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Home Screen Wizard</h3>
+      <p>Start at a home screen with big action buttons. Each flow (import, quiz, history) is a full-screen step. Guided and clean.</p>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>Pros</h4><ul><li>Very clear, no confusion</li><li>Full screen for quiz</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>More clicks between actions</li><li>Harder to switch banks mid-session</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px">Click your preferred approach, or let me know in the terminal</p>

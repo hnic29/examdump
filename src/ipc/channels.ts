@@ -15,4 +15,5 @@ export const IPC = {
   GENERATE_PROMPT: 'generate-prompt',
   COPY_TO_CLIPBOARD: 'copy-to-clipboard',
   PANEL_STATE_CHANGED: 'panel-state-changed',
+  EXPORT_BANK: 'export-bank',
 } as const;

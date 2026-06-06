@@ -18,6 +18,7 @@ const api: ElectronAPI = {
   closePanel: () => ipcRenderer.invoke(IPC.CLOSE_PANEL),
   generatePrompt: (text) => ipcRenderer.invoke(IPC.GENERATE_PROMPT, text),
   copyToClipboard: (text) => ipcRenderer.invoke(IPC.COPY_TO_CLIPBOARD, text),
+  exportBank: (bankId) => ipcRenderer.invoke(IPC.EXPORT_BANK, bankId),
   onPanelStateChanged: (cb) => {
     const handler = (_: unknown, open: boolean) => cb(open);
     ipcRenderer.on(IPC.PANEL_STATE_CHANGED, handler);

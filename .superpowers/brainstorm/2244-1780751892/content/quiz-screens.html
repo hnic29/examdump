@@ -1,0 +1,174 @@
+<h2>Quiz Screen Mockups</h2>
+<p class="subtitle">Active quiz (left) and answer feedback states (right)</p>
+
+<style>
+.quiz-shell {
+  background: #0f1117;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #2d3a52;
+  font-family: -apple-system, sans-serif;
+}
+.quiz-topbar {
+  background: #1a1f2e;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #2d3a52;
+}
+.quiz-progress-text { color: #8b9cb0; font-size: 11px; }
+.quiz-timer { color: #ff9800; font-size: 13px; font-weight: 700; font-family: monospace; }
+.quiz-timer.green { color: #4caf50; }
+.quiz-progress-bar { height: 3px; background: #1e2535; }
+.quiz-progress-fill { height: 100%; background: #2196f3; }
+.quiz-body { padding: 16px 18px; }
+.q-type-badge { background: #2196f320; color: #64b5f6; font-size: 9px; padding: 2px 7px; border-radius: 10px; display: inline-block; margin-bottom: 8px; }
+.q-text { color: #e0e0e0; font-size: 13px; line-height: 1.6; margin-bottom: 14px; font-weight: 500; }
+.option-row { display: flex; align-items: flex-start; gap: 9px; padding: 9px 11px; border-radius: 6px; border: 1px solid #2d3a52; margin-bottom: 6px; cursor: pointer; background: #1a1f2e; }
+.option-row:hover { border-color: #4a6fa5; }
+.option-row.selected { border-color: #2196f3; background: #2196f320; }
+.option-row.correct { border-color: #4caf50; background: #4caf5020; }
+.option-row.incorrect { border-color: #f44336; background: #f4433620; }
+.option-row.revealed { border-color: #4caf50; background: #4caf5015; }
+.opt-letter { width: 22px; height: 22px; border-radius: 4px; background: #2d3a52; color: #8b9cb0; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.option-row.selected .opt-letter { background: #2196f3; color: #fff; }
+.option-row.correct .opt-letter { background: #4caf50; color: #fff; }
+.option-row.incorrect .opt-letter { background: #f44336; color: #fff; }
+.option-row.revealed .opt-letter { background: #4caf50; color: #fff; }
+.opt-text { color: #c9d4e8; font-size: 11px; line-height: 1.5; padding-top: 3px; }
+.quiz-footer { padding: 10px 18px 14px; display: flex; align-items: center; justify-content: space-between; }
+.btn { padding: 7px 18px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; }
+.btn-primary { background: #2196f3; color: #fff; }
+.btn-disabled { background: #2d3a52; color: #4a5568; }
+.btn-next { background: #4caf50; color: #fff; }
+.btn-next-wrong { background: #2196f3; color: #fff; }
+.explanation-box { margin: 4px 0 10px; background: #1e2535; border-left: 3px solid #4caf50; border-radius: 0 6px 6px 0; padding: 9px 12px; }
+.explanation-box.wrong { border-left-color: #f44336; }
+.expl-label { font-size: 9px; color: #8b9cb0; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+.expl-text { color: #c9d4e8; font-size: 11px; line-height: 1.5; }
+.result-banner { padding: 8px 14px; display: flex; align-items: center; gap: 8px; }
+.result-banner.correct-banner { background: #4caf5018; border-bottom: 1px solid #4caf5040; }
+.result-banner.incorrect-banner { background: #f4433618; border-bottom: 1px solid #f4433640; }
+.banner-icon { font-size: 18px; }
+.banner-text { font-size: 12px; font-weight: 700; }
+.correct-banner .banner-text { color: #4caf50; }
+.incorrect-banner .banner-text { color: #f44336; }
+.per-q-timer { display: flex; align-items: center; gap: 5px; }
+.per-q-bar { flex: 1; height: 4px; background: #2d3a52; border-radius: 2px; }
+.per-q-fill { height: 100%; border-radius: 2px; background: #4caf50; }
+.per-q-fill.warn { background: #ff9800; }
+.per-q-fill.danger { background: #f44336; }
+</style>
+
+<div class="split" style="gap:16px;align-items:flex-start">
+
+  <!-- LEFT: Active quiz -->
+  <div class="mockup" style="flex:1">
+    <div class="mockup-header">Active Quiz — timed mode on</div>
+    <div class="mockup-body" style="padding:0">
+      <div class="quiz-shell">
+        <div class="quiz-topbar">
+          <span class="quiz-progress-text">Question 12 of 50 &nbsp;·&nbsp; 8 correct</span>
+          <span class="quiz-timer">⏱ 47:22</span>
+        </div>
+        <!-- per-question timer bar -->
+        <div style="padding:6px 14px 0;background:#1a1f2e">
+          <div class="per-q-timer">
+            <span style="color:#8b9cb0;font-size:9px">Per Q:</span>
+            <div class="per-q-bar"><div class="per-q-fill warn" style="width:55%"></div></div>
+            <span style="color:#ff9800;font-size:10px;font-family:monospace">0:22</span>
+          </div>
+        </div>
+        <div class="quiz-progress-bar" style="margin-top:6px"><div class="quiz-progress-fill" style="width:24%"></div></div>
+        <div class="quiz-body">
+          <div class="q-type-badge">MULTIPLE CHOICE</div>
+          <div class="q-text">Which protocol operates at Layer 4 of the OSI model and provides connection-oriented, reliable data delivery?</div>
+          <div class="option-row">
+            <div class="opt-letter">A</div>
+            <div class="opt-text">UDP — User Datagram Protocol</div>
+          </div>
+          <div class="option-row selected">
+            <div class="opt-letter">B</div>
+            <div class="opt-text">TCP — Transmission Control Protocol</div>
+          </div>
+          <div class="option-row">
+            <div class="opt-letter">C</div>
+            <div class="opt-text">IP — Internet Protocol</div>
+          </div>
+          <div class="option-row">
+            <div class="opt-letter">D</div>
+            <div class="opt-text">ICMP — Internet Control Message Protocol</div>
+          </div>
+        </div>
+        <div class="quiz-footer">
+          <span style="color:#8b9cb0;font-size:10px">Click an answer to select</span>
+          <div class="btn btn-primary">Submit →</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Two feedback states stacked -->
+  <div style="display:flex;flex-direction:column;gap:12px;flex:1">
+
+    <div class="mockup">
+      <div class="mockup-header" style="background:#4caf5030;color:#4caf50">Feedback — Correct answer</div>
+      <div class="mockup-body" style="padding:0">
+        <div class="quiz-shell">
+          <div class="result-banner correct-banner">
+            <span class="banner-icon">✅</span>
+            <span class="banner-text">Correct!</span>
+          </div>
+          <div class="quiz-body" style="padding-top:10px">
+            <div class="q-text" style="font-size:12px;margin-bottom:10px">Which protocol operates at Layer 4...</div>
+            <div class="option-row correct">
+              <div class="opt-letter">B</div>
+              <div class="opt-text">TCP — Transmission Control Protocol</div>
+            </div>
+            <div class="explanation-box">
+              <div class="expl-label">Explanation</div>
+              <div class="expl-text">TCP operates at the Transport Layer (Layer 4) and uses a three-way handshake to establish reliable, ordered connections. UDP also operates at Layer 4 but is connectionless.</div>
+            </div>
+          </div>
+          <div class="quiz-footer" style="justify-content:flex-end">
+            <div class="btn btn-next">Next Question →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mockup">
+      <div class="mockup-header" style="background:#f4433630;color:#f44336">Feedback — Wrong answer</div>
+      <div class="mockup-body" style="padding:0">
+        <div class="quiz-shell">
+          <div class="result-banner incorrect-banner">
+            <span class="banner-icon">❌</span>
+            <span class="banner-text">Incorrect</span>
+          </div>
+          <div class="quiz-body" style="padding-top:10px">
+            <div class="q-text" style="font-size:12px;margin-bottom:10px">Which protocol operates at Layer 4...</div>
+            <div class="option-row incorrect">
+              <div class="opt-letter">A</div>
+              <div class="opt-text">UDP — User Datagram Protocol</div>
+            </div>
+            <div class="option-row revealed">
+              <div class="opt-letter">B</div>
+              <div class="opt-text">TCP — Transmission Control Protocol ← correct</div>
+            </div>
+            <div class="explanation-box wrong">
+              <div class="expl-label">Explanation</div>
+              <div class="expl-text">TCP operates at the Transport Layer (Layer 4) and uses a three-way handshake to establish reliable, ordered connections. UDP also operates at Layer 4 but is connectionless.</div>
+            </div>
+          </div>
+          <div class="quiz-footer" style="justify-content:flex-end">
+            <div class="btn btn-next-wrong">Next Question →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px">Does this quiz experience look right? Any changes to the layout, feedback style, or timer display?</p>

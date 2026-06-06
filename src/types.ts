@@ -98,7 +98,7 @@ export interface CompleteAttemptInput {
 }
 
 export interface ElectronAPI {
-  importFile: () => Promise<{ text: string; fileName: string } | null>;
+  importFile: () => Promise<{ text: string; fileName: string; isJson: boolean } | null>;
   parseFile: (text: string) => Promise<ParseResult>;
   ingestJSON: (json: string, name: string) => Promise<{ id: number; questionCount: number }>;
   loadBanks: () => Promise<QuestionBank[]>;
@@ -114,4 +114,5 @@ export interface ElectronAPI {
   generatePrompt: (text: string) => Promise<string>;
   copyToClipboard: (text: string) => Promise<void>;
   onPanelStateChanged: (cb: (open: boolean) => void) => () => void;
+  exportBank: (bankId: number) => Promise<void>;
 }
