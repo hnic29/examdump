@@ -47,12 +47,21 @@ export function ImportFlow({ onComplete, onCancel }: Props) {
   const handlePasteImport = async () => {
     setError('');
     try {
-      const parsed = JSON.parse(pasteJson) as { questions: ParsedQuestion[] };
+      const parsed = JSON.parse(pasteJson) as { questions: unknown[] };
       if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) {
         setError('JSON must have a "questions" array with at least one item.');
         return;
       }
-      setParsedQuestions(parsed.questions);
+      // Validate each question has required fields
+      const invalid = parsed.questions.findIndex((q: unknown) => {
+        const item = q as Record<string, unknown>;
+        return !item.question || !item.type || !Array.isArray(item.options) || !Array.isArray(item.correct_answers);
+      });
+      if (invalid !== -1) {
+        setError(`Question ${invalid + 1} is missing required fields (question, type, options, correct_answers). Make sure you copied the full JSON response.`);
+        return;
+      }
+      setParsedQuestions(parsed.questions as ParsedQuestion[]);
       setStep('naming');
     } catch {
       setError('Invalid JSON. Make sure you copied the full response from the AI.');

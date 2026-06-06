@@ -9,7 +9,9 @@ let resizeListener: (() => void) | null = null;
 
 export function openPanel(mainWindow: BrowserWindow, url: string): void {
   if (!panel) {
-    panel = new WebContentsView();
+    panel = new WebContentsView({
+      webPreferences: { partition: 'persist:ai-panel', contextIsolation: true },
+    });
     mainWindow.contentView.addChildView(panel);
   }
   sizePanelToWindow(mainWindow);

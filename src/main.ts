@@ -47,6 +47,13 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 
 function registerIpcHandlers() {
+  function requirePosInt(v: unknown, name: string): number {
+    if (!Number.isInteger(v) || (v as number) < 1) {
+      throw new Error(`Invalid ${name}: expected positive integer, got ${v}`);
+    }
+    return v as number;
+  }
+
   ipcMain.handle(IPC.IMPORT_FILE, async () => {
     if (!mainWindow) return null;
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -79,19 +86,30 @@ function registerIpcHandlers() {
     return getAllBanks().map(b => ({ ...b, ...getBankStats(b.id) }));
   });
 
-  ipcMain.handle(IPC.LOAD_QUESTIONS, (_e, bankId: number) => getQuestionsForBank(bankId));
+  ipcMain.handle(IPC.LOAD_QUESTIONS, (_e, bankId: number) => getQuestionsForBank(requirePosInt(bankId, 'bankId')));
 
-  ipcMain.handle(IPC.DELETE_BANK, (_e, bankId: number) => deleteBank(bankId));
+  ipcMain.handle(IPC.DELETE_BANK, (_e, bankId: number) => deleteBank(requirePosInt(bankId, 'bankId')));
 
-  ipcMain.handle(IPC.CREATE_ATTEMPT, (_e, input: CreateAttemptInput) => createAttempt(input));
+  ipcMain.handle(IPC.CREATE_ATTEMPT, (_e, input: CreateAttemptInput) => {
+    requirePosInt(input.bankId, 'bankId');
+    return createAttempt(input);
+  });
 
-  ipcMain.handle(IPC.SAVE_RESPONSE, (_e, input: SaveResponseInput) => saveResponse(input));
+  ipcMain.handle(IPC.SAVE_RESPONSE, (_e, input: SaveResponseInput) => {
+    requirePosInt(input.attemptId, 'attemptId');
+    requirePosInt(input.questionId, 'questionId');
+    return saveResponse(input);
+  });
 
-  ipcMain.handle(IPC.COMPLETE_ATTEMPT, (_e, input: CompleteAttemptInput) => completeAttempt(input));
+  ipcMain.handle(IPC.COMPLETE_ATTEMPT, (_e, input: CompleteAttemptInput) => {
+    requirePosInt(input.attemptId, 'attemptId');
+    const score = Math.min(100, Math.max(0, Number.isFinite(input.score) ? input.score : 0));
+    return completeAttempt({ ...input, score });
+  });
 
-  ipcMain.handle(IPC.GET_HISTORY, (_e, bankId: number) => getAttemptsForBank(bankId));
+  ipcMain.handle(IPC.GET_HISTORY, (_e, bankId: number) => getAttemptsForBank(requirePosInt(bankId, 'bankId')));
 
-  ipcMain.handle(IPC.GET_RESPONSES, (_e, attemptId: number) => getResponsesForAttempt(attemptId));
+  ipcMain.handle(IPC.GET_RESPONSES, (_e, attemptId: number) => getResponsesForAttempt(requirePosInt(attemptId, 'attemptId')));
 
   ipcMain.handle(IPC.OPEN_PANEL, (_e, url: string) => {
     if (!mainWindow) return;
