@@ -40,7 +40,7 @@ type QuizAction =
   | { type: 'NEXT' }
   | { type: 'TOGGLE_PAUSE' };
 
-function reducer(state: QuizState, action: QuizAction): QuizState {
+export function reducer(state: QuizState, action: QuizAction): QuizState {
   switch (action.type) {
     case 'START':
       return { ...state, phase: 'active', questions: action.questions, currentIndex: 0, selectedAnswers: [], paused: false, attemptId: action.attemptId, config: action.config, responses: [], lastResponse: null, questionStartTime: Date.now() };
@@ -106,8 +106,13 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
   const perQTimer = useTimer(state.config.perQuestionTimeLimit ?? 0, handlePerQExpire);
 
   useEffect(() => {
-    if (state.paused) { totalTimer.pause(); perQTimer.pause(); }
-    else if (state.phase === 'active') { totalTimer.resume(); perQTimer.resume(); }
+    if (state.paused || state.phase === 'feedback') {
+      perQTimer.pause();
+      if (state.paused) totalTimer.pause();
+    } else if (state.phase === 'active') {
+      totalTimer.resume();
+      perQTimer.resume();
+    }
   }, [state.paused, state.phase]);
 
   useEffect(() => {
@@ -122,7 +127,7 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
     const attemptId = await window.electronAPI.createAttempt({ bankId, totalQuestions: questions.length, ...cfg });
     dispatch({ type: 'START', questions, attemptId, config: cfg });
     if (cfg.totalTimeLimit) { totalTimer.reset(cfg.totalTimeLimit); totalTimer.start(); }
-    if (cfg.perQuestionTimeLimit) { perQTimer.reset(cfg.perQuestionTimeLimit); perQTimer.start(); }
+    // Per-question timer is started by the useEffect on [state.currentIndex, state.phase]
   };
 
   const submitAnswer = async (question: Question, answers: string[]) => {
