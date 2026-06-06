@@ -1,5 +1,290 @@
-import React from 'react';
-interface Props { bankId: number; onComplete: (attemptId: number) => void; onCancel: () => void; }
-export function ActiveQuiz({ onCancel }: Props) {
-  return <div style={{ padding: 20 }}><h2>Quiz</h2><p style={{ color: '#8b9cb0', marginTop: 8 }}>Full implementation coming in Task 12</p><button className="btn btn-secondary" style={{ marginTop: 12 }} onClick={onCancel}>Cancel</button></div>;
+import React, { useState, useEffect, useReducer, useRef } from 'react';
+import { QuizSetup } from './QuizSetup';
+import { AnswerFeedback } from './AnswerFeedback';
+import { useTimer } from '../hooks/useTimer';
+import type { Question, QuestionResponse, CreateAttemptInput, TimedMode } from '../types';
+
+type QuizPhase = 'setup' | 'active' | 'feedback';
+
+interface QuizConfig {
+  timedMode: TimedMode;
+  totalTimeLimit: number | null;
+  perQuestionTimeLimit: number | null;
+  showAnswerImmediately: boolean;
+}
+
+interface StoredResponse {
+  questionId: number;
+  selectedAnswers: string[];
+  isCorrect: boolean;
+  timeTaken: number;
+}
+
+interface QuizState {
+  phase: QuizPhase;
+  questions: Question[];
+  currentIndex: number;
+  selectedAnswers: string[];
+  paused: boolean;
+  attemptId: number | null;
+  config: QuizConfig;
+  responses: StoredResponse[];
+  lastResponse: StoredResponse | null;
+  questionStartTime: number;
+}
+
+type QuizAction =
+  | { type: 'START'; questions: Question[]; attemptId: number; config: QuizConfig }
+  | { type: 'SELECT'; answers: string[] }
+  | { type: 'SUBMIT'; response: StoredResponse; showImmediately: boolean }
+  | { type: 'NEXT' }
+  | { type: 'TOGGLE_PAUSE' };
+
+function reducer(state: QuizState, action: QuizAction): QuizState {
+  switch (action.type) {
+    case 'START':
+      return { ...state, phase: 'active', questions: action.questions, currentIndex: 0, selectedAnswers: [], paused: false, attemptId: action.attemptId, config: action.config, responses: [], lastResponse: null, questionStartTime: Date.now() };
+    case 'SELECT':
+      return { ...state, selectedAnswers: action.answers };
+    case 'SUBMIT': {
+      const newResponses = [...state.responses, action.response];
+      const nextIndex = action.showImmediately ? state.currentIndex : state.currentIndex + 1;
+      return {
+        ...state,
+        phase: action.showImmediately ? 'feedback' : 'active',
+        currentIndex: nextIndex,
+        selectedAnswers: [],
+        responses: newResponses,
+        lastResponse: action.response,
+        questionStartTime: Date.now(),
+      };
+    }
+    case 'NEXT':
+      return { ...state, phase: 'active', currentIndex: state.currentIndex + 1, selectedAnswers: [], lastResponse: null, questionStartTime: Date.now() };
+    case 'TOGGLE_PAUSE':
+      return { ...state, paused: !state.paused };
+    default:
+      return state;
+  }
+}
+
+interface Props {
+  bankId: number;
+  onComplete: (attemptId: number) => void;
+  onCancel: () => void;
+}
+
+export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
+  const [state, dispatch] = useReducer(reducer, {
+    phase: 'setup',
+    questions: [],
+    currentIndex: 0,
+    selectedAnswers: [],
+    paused: false,
+    attemptId: null,
+    config: { timedMode: 'none', totalTimeLimit: null, perQuestionTimeLimit: null, showAnswerImmediately: true },
+    responses: [],
+    lastResponse: null,
+    questionStartTime: Date.now(),
+  });
+  const [questionCount, setQuestionCount] = useState(0);
+  const finishingRef = useRef(false);
+
+  useEffect(() => {
+    window.electronAPI.loadQuestions(bankId).then(qs => setQuestionCount(qs.length));
+  }, [bankId]);
+
+  const handleTotalExpire = () => {
+    if (state.attemptId && !finishingRef.current) finishQuiz(state.attemptId, state.responses, state.questions);
+  };
+  const handlePerQExpire = () => {
+    if (state.phase !== 'active' || !state.attemptId) return;
+    submitAnswer(state.questions[state.currentIndex], []);
+  };
+
+  const totalTimer = useTimer(state.config.totalTimeLimit ?? 0, handleTotalExpire);
+  const perQTimer = useTimer(state.config.perQuestionTimeLimit ?? 0, handlePerQExpire);
+
+  useEffect(() => {
+    if (state.paused) { totalTimer.pause(); perQTimer.pause(); }
+    else if (state.phase === 'active') { totalTimer.resume(); perQTimer.resume(); }
+  }, [state.paused, state.phase]);
+
+  useEffect(() => {
+    if (state.phase === 'active' && state.config.perQuestionTimeLimit) {
+      perQTimer.reset(state.config.perQuestionTimeLimit);
+      perQTimer.start();
+    }
+  }, [state.currentIndex, state.phase]);
+
+  const handleStart = async (cfg: Omit<CreateAttemptInput, 'bankId' | 'totalQuestions'>) => {
+    const questions = await window.electronAPI.loadQuestions(bankId);
+    const attemptId = await window.electronAPI.createAttempt({ bankId, totalQuestions: questions.length, ...cfg });
+    dispatch({ type: 'START', questions, attemptId, config: cfg });
+    if (cfg.totalTimeLimit) { totalTimer.reset(cfg.totalTimeLimit); totalTimer.start(); }
+    if (cfg.perQuestionTimeLimit) { perQTimer.reset(cfg.perQuestionTimeLimit); perQTimer.start(); }
+  };
+
+  const submitAnswer = async (question: Question, answers: string[]) => {
+    if (!state.attemptId) return;
+    const elapsed = Math.floor((Date.now() - state.questionStartTime) / 1000);
+    const isCorrect = arraysMatchSorted([...answers].sort(), [...question.correctAnswers].sort());
+    const response: StoredResponse = { questionId: question.id, selectedAnswers: answers, isCorrect, timeTaken: elapsed };
+    await window.electronAPI.saveResponse({ attemptId: state.attemptId, questionId: question.id, selectedAnswers: answers, isCorrect, timeTaken: elapsed });
+    dispatch({ type: 'SUBMIT', response, showImmediately: state.config.showAnswerImmediately });
+
+    const newResponses = [...state.responses, response];
+    const isLast = state.currentIndex >= state.questions.length - 1;
+    if (!state.config.showAnswerImmediately && isLast) {
+      finishQuiz(state.attemptId, newResponses, state.questions);
+    }
+  };
+
+  const handleNext = () => {
+    const isLast = state.currentIndex >= state.questions.length - 1;
+    if (isLast) finishQuiz(state.attemptId!, state.responses, state.questions);
+    else dispatch({ type: 'NEXT' });
+  };
+
+  const finishQuiz = async (attemptId: number, responses: StoredResponse[], questions: Question[]) => {
+    if (finishingRef.current) return;
+    finishingRef.current = true;
+    const correctCount = responses.filter(r => r.isCorrect).length;
+    const score = questions.length > 0 ? (correctCount / questions.length) * 100 : 0;
+    await window.electronAPI.completeAttempt({ attemptId, correctCount, score });
+    onComplete(attemptId);
+  };
+
+  const handleSelectAnswer = (optId: string) => {
+    const q = state.questions[state.currentIndex];
+    if (!q) return;
+    if (q.questionType === 'multi_select') {
+      const current = state.selectedAnswers;
+      const next = current.includes(optId) ? current.filter(a => a !== optId) : [...current, optId];
+      dispatch({ type: 'SELECT', answers: next });
+    } else {
+      dispatch({ type: 'SELECT', answers: [optId] });
+    }
+  };
+
+  const openLink = async (url: string) => {
+    if (!state.paused) dispatch({ type: 'TOGGLE_PAUSE' });
+    await window.electronAPI.openPanel(url);
+  };
+
+  if (state.phase === 'setup') {
+    return <QuizSetup bankId={bankId} questionCount={questionCount} onStart={handleStart} onCancel={onCancel} />;
+  }
+
+  const isComplete = state.currentIndex >= state.questions.length;
+  if (isComplete) return <div style={{ color: '#8b9cb0' }}>Finishing…</div>;
+
+  const question = state.questions[state.currentIndex];
+  const totalSecs = state.config.totalTimeLimit;
+  const perQSecs = state.config.perQuestionTimeLimit;
+
+  return (
+    <div style={{ maxWidth: 680 }}>
+      {/* Top bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span style={{ color: '#8b9cb0', fontSize: 12 }}>
+          Question {state.currentIndex + 1} of {state.questions.length} &nbsp;·&nbsp; {state.responses.filter(r => r.isCorrect).length} correct
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {totalSecs && (
+            <span style={{ fontFamily: 'monospace', color: totalTimer.secondsLeft < 300 ? '#f44336' : '#ff9800', fontWeight: 700 }}>
+              ⏱ {fmt(totalTimer.secondsLeft)}
+            </span>
+          )}
+          <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => dispatch({ type: 'TOGGLE_PAUSE' })}>
+            {state.paused ? '▶ Resume' : '⏸ Pause'}
+          </button>
+        </div>
+      </div>
+
+      {/* Per-question timer bar */}
+      {perQSecs && (
+        <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: '#8b9cb0', fontSize: 10 }}>Per Q:</span>
+          <div style={{ flex: 1, height: 4, background: '#2d3a52', borderRadius: 2 }}>
+            <div style={{
+              height: '100%', borderRadius: 2,
+              background: perQTimer.secondsLeft / perQSecs > 0.4 ? '#4caf50' : perQTimer.secondsLeft / perQSecs > 0.2 ? '#ff9800' : '#f44336',
+              width: `${Math.max(0, (perQTimer.secondsLeft / perQSecs) * 100)}%`,
+              transition: 'width 1s linear',
+            }} />
+          </div>
+          <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#8b9cb0' }}>{perQTimer.secondsLeft}s</span>
+        </div>
+      )}
+
+      {/* Progress bar */}
+      <div style={{ height: 3, background: '#1e2535', borderRadius: 2, marginBottom: 16 }}>
+        <div style={{ height: '100%', background: '#2196f3', borderRadius: 2, width: `${(state.currentIndex / state.questions.length) * 100}%` }} />
+      </div>
+
+      {/* Pause overlay */}
+      {state.paused && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, cursor: 'pointer' }} onClick={() => dispatch({ type: 'TOGGLE_PAUSE' })}>
+          <div style={{ textAlign: 'center', color: '#e0e0e0' }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>⏸</div>
+            <div style={{ fontSize: 18, fontWeight: 700 }}>Paused</div>
+            <div style={{ fontSize: 13, color: '#8b9cb0', marginTop: 6 }}>Click anywhere to resume</div>
+          </div>
+        </div>
+      )}
+
+      {state.phase === 'feedback' && state.lastResponse ? (
+        <AnswerFeedback
+          question={question}
+          response={{
+            id: 0,
+            attemptId: state.attemptId!,
+            questionId: state.lastResponse.questionId,
+            selectedAnswers: state.lastResponse.selectedAnswers,
+            isCorrect: state.lastResponse.isCorrect,
+            timeTaken: state.lastResponse.timeTaken,
+          }}
+          onNext={handleNext}
+          onOpenLink={openLink}
+        />
+      ) : (
+        <>
+          <div style={{ marginBottom: 12 }}>
+            <span className={`badge ${question.questionType === 'true_false' ? 'badge-tf' : question.questionType === 'multi_select' ? 'badge-ms' : 'badge-mc'}`}>
+              {question.questionType === 'multiple_choice' ? 'Multiple Choice' : question.questionType === 'true_false' ? 'True / False' : 'Select All That Apply'}
+            </span>
+          </div>
+          <p style={{ fontSize: 15, lineHeight: 1.6, marginBottom: 16 }}>{question.questionText}</p>
+          {question.questionType === 'multi_select' && (
+            <p style={{ fontSize: 11, color: '#8b9cb0', marginBottom: 10 }}>Select all that apply</p>
+          )}
+          {question.options.map(opt => {
+            const sel = state.selectedAnswers.includes(opt.id);
+            return (
+              <div key={opt.id} onClick={() => handleSelectAnswer(opt.id)} style={{ display: 'flex', gap: 10, padding: '10px 12px', borderRadius: 6, border: `1px solid ${sel ? '#2196f3' : '#2d3a52'}`, background: sel ? '#2196f320' : '#1a1f2e', marginBottom: 6, cursor: 'pointer' }}>
+                <div style={{ width: 22, height: 22, borderRadius: 4, background: sel ? '#2196f3' : '#2d3a52', color: sel ? '#fff' : '#8b9cb0', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{opt.id}</div>
+                <div style={{ fontSize: 13, paddingTop: 3 }}>{opt.text}</div>
+              </div>
+            );
+          })}
+          <div style={{ marginTop: 16 }}>
+            <button className="btn btn-primary" disabled={state.selectedAnswers.length === 0} onClick={() => submitAnswer(question, state.selectedAnswers)}>
+              Submit →
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function fmt(s: number): string {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+function arraysMatchSorted(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((v, i) => v === b[i]);
 }
