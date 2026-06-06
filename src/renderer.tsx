@@ -4,4 +4,8 @@ import { App } from './App';
 import './styles/app.css';
 
 const root = document.getElementById('root')!;
-createRoot(root).render(<App />);
+createRoot(root).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Library } from './components/Library';
 import { ImportFlow } from './components/ImportFlow';
@@ -19,13 +19,15 @@ export function App() {
   const [view, setView] = useState<AppView>({ screen: 'library', selectedBankId: null });
   const [panelOpen, setPanelOpen] = useState(false);
 
-  const refreshBanks = async () => setBanks(await window.electronAPI.loadBanks());
+  const refreshBanks = useCallback(async () => {
+    setBanks(await window.electronAPI.loadBanks());
+  }, []);
 
   useEffect(() => {
     refreshBanks();
     const unsub = window.electronAPI.onPanelStateChanged(setPanelOpen);
     return unsub;
-  }, []);
+  }, [refreshBanks]);
 
   const closePanel = () => window.electronAPI.closePanel();
 
