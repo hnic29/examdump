@@ -29,7 +29,8 @@ export function AnswerFeedback({ question, response, onNext, onOpenLink }: Props
         {question.options.map(opt => {
           const isSelected = response.selectedAnswers.includes(opt.id);
           const isCorrect = question.correctAnswers.includes(opt.id);
-          let bg = '#1a1f2e', border = '#2d3a52', color = '#c9d4e8';
+          const color = '#c9d4e8';
+          let bg = '#1a1f2e', border = '#2d3a52';
           if (isSelected && isCorrect) { bg = '#4caf5020'; border = '#4caf50'; }
           else if (isSelected && !isCorrect) { bg = '#f4433620'; border = '#f44336'; }
           else if (!isSelected && isCorrect) { bg = '#4caf5010'; border = '#4caf5060'; }
