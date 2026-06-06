@@ -20,12 +20,15 @@ export function ImportFlow({ onComplete, onCancel }: Props) {
 
   const handlePickFile = async () => {
     setError('');
+    setStep('parsing');
     const result = await window.electronAPI.importFile();
-    if (!result) return;
+    if (!result) {
+      setStep('idle');
+      return;
+    }
     setFileName(result.fileName);
     setExtractedText(result.text);
     setBankName(result.fileName.replace(/\.[^.]+$/, ''));
-    setStep('parsing');
     const parsed = await window.electronAPI.parseFile(result.text);
     if (parsed.success && parsed.questions.length > 0) {
       setParsedQuestions(parsed.questions);
@@ -59,8 +62,13 @@ export function ImportFlow({ onComplete, onCancel }: Props) {
   const handleSave = async () => {
     if (!bankName.trim()) { setError('Please enter a name for this question bank.'); return; }
     setStep('saving');
-    await window.electronAPI.ingestJSON(JSON.stringify({ questions: parsedQuestions }), bankName.trim());
-    onComplete();
+    try {
+      await window.electronAPI.ingestJSON(JSON.stringify({ questions: parsedQuestions }), bankName.trim());
+      onComplete();
+    } catch (e) {
+      setError('Failed to save question bank. Please try again.');
+      setStep('naming');
+    }
   };
 
   if (step === 'idle' || step === 'parsing') {
