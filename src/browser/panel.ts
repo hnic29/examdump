@@ -38,9 +38,11 @@ export function isPanelOpen(): boolean {
   return panel !== null;
 }
 
+const TOOLBAR_HEIGHT = 44; // matches .panel-toolbar height in app.css
+
 function sizePanelToWindow(win: BrowserWindow): void {
   if (!panel) return;
   const [w, h] = win.getContentSize();
   const panelW = Math.floor(w * 0.6);
-  panel.setBounds({ x: w - panelW, y: 0, width: panelW, height: h });
+  panel.setBounds({ x: w - panelW, y: TOOLBAR_HEIGHT, width: panelW, height: h - TOOLBAR_HEIGHT });
 }

@@ -85,9 +85,12 @@ export function App() {
       </main>
 
       {panelOpen && (
-        <div className="panel-overlay-strip">
-          <button className="panel-back-btn" onClick={closePanel}>
-            {view.screen === 'quiz' ? '⏸ Resume Quiz' : '← Back'}
+        <div className="panel-toolbar">
+          <span className="panel-toolbar-label">
+            {view.screen === 'quiz' ? '⏸ Quiz is paused — close this panel to resume' : '🌐 AI / Reference Browser'}
+          </span>
+          <button className="panel-close-btn" onClick={closePanel}>
+            {view.screen === 'quiz' ? '✕ Close & Resume Quiz' : '✕ Close Panel'}
           </button>
         </div>
       )}

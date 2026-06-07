@@ -149,24 +149,39 @@ body {
 }
 .radio-option.selected { border-color: #2196f3; background: #2196f320; }
 
-.panel-overlay-strip {
+.panel-toolbar {
   position: fixed;
-  top: 0; right: 40%;
-  width: 40px; height: 100%;
+  top: 0;
+  right: 0;
+  width: 60%;
+  height: 44px;
   z-index: 200;
-  display: flex; flex-direction: column;
+  background: #1a1f2e;
+  border-bottom: 1px solid #2d3a52;
+  display: flex;
   align-items: center;
-  padding-top: 12px;
+  justify-content: space-between;
+  padding: 0 14px;
+  gap: 10px;
 }
 
-.panel-back-btn {
-  background: #2196f3;
-  color: #fff;
-  border: none;
-  border-radius: 6px 0 0 6px;
-  padding: 8px 10px;
+.panel-toolbar-label {
+  font-size: 12px;
+  color: #8b9cb0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel-close-btn {
+  background: #f4433620;
+  color: #f44336;
+  border: 1px solid #f4433640;
+  border-radius: 6px;
+  padding: 5px 12px;
   cursor: pointer;
-  font-size: 11px;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }

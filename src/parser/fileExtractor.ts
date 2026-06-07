@@ -1,10 +1,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-// Use require() directly — these are externalized from the Vite bundle so
-// dynamic import() can be unreliable in Electron's main process.
+// Use require() directly — externalized from Vite bundle so dynamic import() is unreliable.
+// pdf-parse is required from /lib/pdf-parse.js (not the package root) to avoid its
+// test-file auto-loading behaviour, which crashes in non-standard working directories.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse: (buf: Buffer) => Promise<{ text: string }> = require('pdf-parse');
+const pdfParse: (buf: Buffer) => Promise<{ text: string }> = require('pdf-parse/lib/pdf-parse.js');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const mammoth: { extractRawText: (opts: { buffer: Buffer }) => Promise<{ value: string }> } = require('mammoth');
 
