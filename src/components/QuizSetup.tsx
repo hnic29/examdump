@@ -1,32 +1,40 @@
-import React, { useState } from 'react';
-import type { TimedMode, CreateAttemptInput } from '../types';
+import React, { useState, useEffect } from 'react';
+import type { TimedMode, QuizStartConfig, WaterfallProgress } from '../types';
 
 interface Props {
   bankId: number;
   questionCount: number;
-  onStart: (config: Omit<CreateAttemptInput, 'bankId' | 'totalQuestions'>) => void;
+  onStart: (config: QuizStartConfig) => void;
   onCancel: () => void;
 }
 
 export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
+  const [callMode, setCallMode] = useState<'normal' | 'waterfall'>('normal');
+  const [dailyCount, setDailyCount] = useState('10');
+  const [waterfallProgress, setWaterfallProgress] = useState<WaterfallProgress | null>(null);
   const [timedMode, setTimedMode] = useState<TimedMode>('none');
   const [totalMinutes, setTotalMinutes] = useState('90');
   const [perQuestionSeconds, setPerQuestionSeconds] = useState('60');
   const [showAnswerImmediately, setShowAnswerImmediately] = useState(true);
 
+  useEffect(() => {
+    window.electronAPI.getWaterfallProgress(bankId).then(setWaterfallProgress);
+  }, [bankId]);
+
   const handleStart = () => {
-    const totalLimit = (timedMode === 'total' || timedMode === 'both') ? parseInt(totalMinutes, 10) * 60 : null;
-    const perQLimit = (timedMode === 'per_question' || timedMode === 'both') ? parseInt(perQuestionSeconds, 10) : null;
+    const totalLimit = (timedMode === 'total' || timedMode === 'both')
+      ? parseInt(totalMinutes, 10) * 60 : null;
+    const perQLimit = (timedMode === 'per_question' || timedMode === 'both')
+      ? parseInt(perQuestionSeconds, 10) : null;
 
     if (totalLimit !== null && !Number.isFinite(totalLimit)) return;
     if (perQLimit !== null && !Number.isFinite(perQLimit)) return;
 
-    onStart({
-      timedMode,
-      totalTimeLimit: totalLimit,
-      perQuestionTimeLimit: perQLimit,
-      showAnswerImmediately,
-    });
+    const quizMode: QuizStartConfig['quizMode'] = callMode === 'waterfall'
+      ? { mode: 'waterfall', dailyCount: Math.max(1, parseInt(dailyCount, 10) || 10) }
+      : { mode: 'normal' };
+
+    onStart({ timedMode, totalTimeLimit: totalLimit, perQuestionTimeLimit: perQLimit, showAnswerImmediately, quizMode });
   };
 
   return (
@@ -34,6 +42,52 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
       <div className="modal">
         <h2>Quiz Setup</h2>
         <p style={{ color: '#8b9cb0', fontSize: 12, marginBottom: 16 }}>{questionCount} questions</p>
+
+        <div className="form-row">
+          <label className="form-label">Call Mode</label>
+          <div className="radio-group">
+            {(['normal', 'waterfall'] as const).map(val => (
+              <div
+                key={val}
+                className={`radio-option${callMode === val ? ' selected' : ''}`}
+                onClick={() => setCallMode(val)}
+              >
+                <span style={{
+                  width: 14, height: 14, borderRadius: '50%',
+                  border: `2px solid ${callMode === val ? '#2196f3' : '#4a5568'}`,
+                  background: callMode === val ? '#2196f3' : 'transparent',
+                  flexShrink: 0,
+                  display: 'inline-block',
+                }} />
+                {val === 'normal' ? 'Normal' : 'Waterfall'}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {callMode === 'waterfall' && (
+          <div className="form-row">
+            <label className="form-label">Daily questions</label>
+            <input
+              className="form-input"
+              type="number"
+              min="1"
+              max={questionCount}
+              value={dailyCount}
+              onChange={e => setDailyCount(e.target.value)}
+            />
+            {waterfallProgress && waterfallProgress.introducedCount < questionCount && (
+              <p style={{ color: '#8b9cb0', fontSize: 11, marginTop: 6 }}>
+                {waterfallProgress.introducedCount} of {questionCount} introduced &nbsp;·&nbsp; last session {formatDate(waterfallProgress.lastSessionDate)}
+              </p>
+            )}
+            {waterfallProgress && waterfallProgress.introducedCount >= questionCount && (
+              <p style={{ color: '#8b9cb0', fontSize: 11, marginTop: 6 }}>
+                All questions introduced — daily full review
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="form-row">
           <label className="form-label">Timer</label>
@@ -119,4 +173,9 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
       </div>
     </div>
   );
+}
+
+function formatDate(iso: string): string {
+  const [year, month, day] = iso.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
