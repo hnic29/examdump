@@ -2,7 +2,7 @@ import React, { useState, useEffect, useReducer, useRef } from 'react';
 import { QuizSetup } from './QuizSetup';
 import { AnswerFeedback } from './AnswerFeedback';
 import { useTimer } from '../hooks/useTimer';
-import type { Question, QuizStartConfig } from '../types';
+import type { Question, QuizStartConfig, TimedMode } from '../types';
 
 type QuizPhase = 'setup' | 'active' | 'feedback';
 
