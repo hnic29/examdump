@@ -7,7 +7,7 @@ describe('createDb', () => {
     initDb(':memory:');
   });
 
-  it('creates all four tables', () => {
+  it('creates all five tables', () => {
     const db = createDb(':memory:');
     const tables = db.prepare(
       "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
@@ -17,6 +17,7 @@ describe('createDb', () => {
     expect(names).toContain('questions');
     expect(names).toContain('quiz_attempts');
     expect(names).toContain('question_responses');
+    expect(names).toContain('waterfall_progress');
   });
 
   it('enforces foreign key cascade on bank delete', () => {
