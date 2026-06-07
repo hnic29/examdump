@@ -2,7 +2,7 @@ import React, { useState, useEffect, useReducer, useRef } from 'react';
 import { QuizSetup } from './QuizSetup';
 import { AnswerFeedback } from './AnswerFeedback';
 import { useTimer } from '../hooks/useTimer';
-import type { Question, QuestionResponse, CreateAttemptInput, TimedMode } from '../types';
+import type { Question, QuizStartConfig } from '../types';
 
 type QuizPhase = 'setup' | 'active' | 'feedback';
 
@@ -122,12 +122,38 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
     }
   }, [state.currentIndex, state.phase]);
 
-  const handleStart = async (cfg: Omit<CreateAttemptInput, 'bankId' | 'totalQuestions'>) => {
-    const questions = await window.electronAPI.loadQuestions(bankId);
-    const attemptId = await window.electronAPI.createAttempt({ bankId, totalQuestions: questions.length, ...cfg });
-    dispatch({ type: 'START', questions, attemptId, config: cfg });
+  const handleStart = async (cfg: QuizStartConfig) => {
+    const allQuestions = await window.electronAPI.loadQuestions(bankId);
+    let questions: Question[];
+
+    if (cfg.quizMode.mode === 'waterfall') {
+      const progress = await window.electronAPI.advanceWaterfall(
+        bankId,
+        cfg.quizMode.dailyCount,
+        allQuestions.length
+      );
+      questions = allQuestions.slice(0, progress.introducedCount);
+    } else {
+      questions = allQuestions;
+    }
+
+    const attemptId = await window.electronAPI.createAttempt({
+      bankId,
+      totalQuestions: questions.length,
+      timedMode: cfg.timedMode,
+      totalTimeLimit: cfg.totalTimeLimit,
+      perQuestionTimeLimit: cfg.perQuestionTimeLimit,
+      showAnswerImmediately: cfg.showAnswerImmediately,
+    });
+
+    dispatch({ type: 'START', questions, attemptId, config: {
+      timedMode: cfg.timedMode,
+      totalTimeLimit: cfg.totalTimeLimit,
+      perQuestionTimeLimit: cfg.perQuestionTimeLimit,
+      showAnswerImmediately: cfg.showAnswerImmediately,
+    }});
+
     if (cfg.totalTimeLimit) { totalTimer.reset(cfg.totalTimeLimit); totalTimer.start(); }
-    // Per-question timer is started by the useEffect on [state.currentIndex, state.phase]
   };
 
   const submitAnswer = async (question: Question, answers: string[]) => {
