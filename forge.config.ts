@@ -4,12 +4,26 @@ import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
 import { VitePlugin } from '@electron-forge/plugin-vite';
+import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    // The Vite plugin would otherwise ignore everything outside `.vite/`, which
+    // drops node_modules entirely. Our main process keeps better-sqlite3,
+    // pdf-parse, and mammoth EXTERNAL (not bundled), so they must ship in
+    // node_modules. Keep .vite, package.json, and node_modules; prune strips
+    // devDependencies so the runtime stays lean.
+    ignore: (file: string) => {
+      if (!file) return false;
+      if (file === '/package.json') return false;
+      if (file.startsWith('/.vite')) return false;
+      if (file.startsWith('/node_modules')) return false;
+      return true;
+    },
+    prune: true,
   },
   rebuildConfig: {},
   makers: [
@@ -19,6 +33,7 @@ const config: ForgeConfig = {
     new MakerDeb({}),
   ],
   plugins: [
+    new AutoUnpackNativesPlugin({}),
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
       // If you are familiar with Vite configuration, it will look really familiar.
