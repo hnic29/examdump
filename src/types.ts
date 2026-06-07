@@ -97,6 +97,20 @@ export interface CompleteAttemptInput {
   score: number;
 }
 
+export interface WaterfallProgress {
+  bankId: number;
+  introducedCount: number;
+  lastSessionDate: string; // 'YYYY-MM-DD'
+}
+
+export type QuizModeConfig =
+  | { mode: 'normal' }
+  | { mode: 'waterfall'; dailyCount: number };
+
+export type QuizStartConfig = Omit<CreateAttemptInput, 'bankId' | 'totalQuestions'> & {
+  quizMode: QuizModeConfig;
+};
+
 export interface ElectronAPI {
   importFile: () => Promise<{ text: string; fileName: string; isJson: boolean } | null>;
   parseFile: (text: string) => Promise<ParseResult>;
