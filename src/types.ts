@@ -133,4 +133,6 @@ export interface ElectronAPI {
   exportBank: (bankId: number) => Promise<void>;
   getWaterfallProgress: (bankId: number) => Promise<WaterfallProgress | null>;
   advanceWaterfall: (bankId: number, dailyCount: number, totalQuestions: number) => Promise<WaterfallProgress>;
+  getActiveAttempt: (bankId: number) => Promise<QuizAttempt | null>;
+  deleteAttempt: (attemptId: number) => Promise<void>;
 }

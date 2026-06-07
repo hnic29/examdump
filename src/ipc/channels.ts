@@ -19,4 +19,6 @@ export const IPC = {
   RESIZE_PANEL: 'resize-panel',
   GET_WATERFALL_PROGRESS: 'get-waterfall-progress',
   ADVANCE_WATERFALL: 'advance-waterfall',
+  GET_ACTIVE_ATTEMPT: 'get-active-attempt',
+  DELETE_ATTEMPT: 'delete-attempt',
 } as const;

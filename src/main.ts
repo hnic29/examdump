@@ -5,7 +5,7 @@ import started from 'electron-squirrel-startup';
 import { initDb } from './db/schema';
 import { getAllBanks, createBank, deleteBank, getBankStats } from './db/banks';
 import { insertQuestions, getQuestionsForBank } from './db/questions';
-import { createAttempt, completeAttempt, getAttemptsForBank } from './db/attempts';
+import { createAttempt, completeAttempt, getAttemptsForBank, getActiveAttempt, deleteAttempt } from './db/attempts';
 import { saveResponse, getResponsesForAttempt } from './db/responses';
 import { getWaterfallProgress, advanceWaterfall } from './db/waterfall';
 import { extractText } from './parser/fileExtractor';
@@ -171,4 +171,8 @@ function registerIpcHandlers() {
       requirePosInt(totalQuestions, 'totalQuestions')
     )
   );
+
+  ipcMain.handle(IPC.GET_ACTIVE_ATTEMPT, (_e, bankId: number) => getActiveAttempt(requirePosInt(bankId, 'bankId')));
+
+  ipcMain.handle(IPC.DELETE_ATTEMPT, (_e, attemptId: number) => deleteAttempt(requirePosInt(attemptId, 'attemptId')));
 }

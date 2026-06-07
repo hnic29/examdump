@@ -22,6 +22,8 @@ const api: ElectronAPI = {
   getWaterfallProgress: (bankId) => ipcRenderer.invoke(IPC.GET_WATERFALL_PROGRESS, bankId),
   advanceWaterfall: (bankId, dailyCount, totalQuestions) =>
     ipcRenderer.invoke(IPC.ADVANCE_WATERFALL, bankId, dailyCount, totalQuestions),
+  getActiveAttempt: (bankId) => ipcRenderer.invoke(IPC.GET_ACTIVE_ATTEMPT, bankId),
+  deleteAttempt: (attemptId) => ipcRenderer.invoke(IPC.DELETE_ATTEMPT, attemptId),
   onPanelStateChanged: (cb) => {
     const handler = (_: unknown, open: boolean) => cb(open);
     ipcRenderer.on(IPC.PANEL_STATE_CHANGED, handler);
