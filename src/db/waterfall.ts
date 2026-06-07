@@ -46,7 +46,16 @@ export function advanceWaterfall(bankId: number, dailyCount: number, totalQuesti
     return toProgress(existing);
   }
 
-  const newIntroduced = Math.min(existing.introduced_count + dailyCount, totalQuestions);
+  // New day: advance only if the current batch was completed. A completed
+  // attempt at exactly introduced_count means the day's set was finished.
+  const batchComplete = db.prepare(
+    'SELECT 1 FROM quiz_attempts WHERE bank_id = ? AND completed_at IS NOT NULL AND total_questions = ? LIMIT 1'
+  ).get(bankId, existing.introduced_count) !== undefined;
+
+  const newIntroduced = batchComplete
+    ? Math.min(existing.introduced_count + dailyCount, totalQuestions)
+    : existing.introduced_count;
+
   db.prepare(
     'UPDATE waterfall_progress SET introduced_count = ?, last_session_date = ? WHERE bank_id = ?'
   ).run(newIntroduced, today, bankId);

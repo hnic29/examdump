@@ -2,8 +2,14 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { initDb, getDb } from '../schema';
 import { createBank, getAllBanks } from '../banks';
 import { getWaterfallProgress, advanceWaterfall } from '../waterfall';
+import { createAttempt, completeAttempt } from '../attempts';
 
 beforeEach(() => { initDb(':memory:'); });
+
+function seedCompletedAttempt(bankId: number, totalQuestions: number): void {
+  const id = createAttempt({ bankId, timedMode: 'none', totalTimeLimit: null, perQuestionTimeLimit: null, showAnswerImmediately: true, totalQuestions });
+  completeAttempt({ attemptId: id, correctCount: totalQuestions, score: 100 });
+}
 
 describe('getWaterfallProgress', () => {
   it('returns null when no record exists', () => {
@@ -50,12 +56,13 @@ describe('advanceWaterfall', () => {
     expect(second.lastSessionDate).toBe(first.lastSessionDate);
   });
 
-  it('advances introducedCount on a new day', () => {
+  it('advances introducedCount on a new day when the batch was completed', () => {
     createBank('Test', 't.pdf');
     const [bank] = getAllBanks();
     getDb().prepare(
       'INSERT INTO waterfall_progress (bank_id, introduced_count, last_session_date) VALUES (?, ?, ?)'
     ).run(bank.id, 10, '2020-01-01');
+    seedCompletedAttempt(bank.id, 10);
     const result = advanceWaterfall(bank.id, 5, 100);
     expect(result.introducedCount).toBe(15);
   });
@@ -66,6 +73,7 @@ describe('advanceWaterfall', () => {
     getDb().prepare(
       'INSERT INTO waterfall_progress (bank_id, introduced_count, last_session_date) VALUES (?, ?, ?)'
     ).run(bank.id, 95, '2020-01-01');
+    seedCompletedAttempt(bank.id, 95);
     const result = advanceWaterfall(bank.id, 10, 100);
     expect(result.introducedCount).toBe(100);
   });
@@ -78,5 +86,38 @@ describe('advanceWaterfall', () => {
     ).run(bank.id, 100, '2020-01-01');
     const result = advanceWaterfall(bank.id, 10, 100);
     expect(result.introducedCount).toBe(100);
+  });
+
+  it('does NOT advance on a new day when the batch was not completed', () => {
+    createBank('Test', 't.pdf');
+    const [bank] = getAllBanks();
+    getDb().prepare(
+      'INSERT INTO waterfall_progress (bank_id, introduced_count, last_session_date) VALUES (?, ?, ?)'
+    ).run(bank.id, 10, '2020-01-01');
+    const result = advanceWaterfall(bank.id, 5, 100);
+    expect(result.introducedCount).toBe(10);
+    expect(result.lastSessionDate).not.toBe('2020-01-01');
+  });
+
+  it('does NOT advance when only an incomplete attempt exists at the introduced count', () => {
+    createBank('Test', 't.pdf');
+    const [bank] = getAllBanks();
+    getDb().prepare(
+      'INSERT INTO waterfall_progress (bank_id, introduced_count, last_session_date) VALUES (?, ?, ?)'
+    ).run(bank.id, 10, '2020-01-01');
+    createAttempt({ bankId: bank.id, timedMode: 'none', totalTimeLimit: null, perQuestionTimeLimit: null, showAnswerImmediately: true, totalQuestions: 10 });
+    const result = advanceWaterfall(bank.id, 5, 100);
+    expect(result.introducedCount).toBe(10);
+  });
+
+  it('does NOT advance when a completed attempt has a different question count', () => {
+    createBank('Test', 't.pdf');
+    const [bank] = getAllBanks();
+    getDb().prepare(
+      'INSERT INTO waterfall_progress (bank_id, introduced_count, last_session_date) VALUES (?, ?, ?)'
+    ).run(bank.id, 10, '2020-01-01');
+    seedCompletedAttempt(bank.id, 7);
+    const result = advanceWaterfall(bank.id, 5, 100);
+    expect(result.introducedCount).toBe(10);
   });
 });
