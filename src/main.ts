@@ -7,6 +7,7 @@ import { getAllBanks, createBank, deleteBank, getBankStats } from './db/banks';
 import { insertQuestions, getQuestionsForBank } from './db/questions';
 import { createAttempt, completeAttempt, getAttemptsForBank } from './db/attempts';
 import { saveResponse, getResponsesForAttempt } from './db/responses';
+import { getWaterfallProgress, advanceWaterfall } from './db/waterfall';
 import { extractText } from './parser/fileExtractor';
 import { parseExamDump } from './parser/ruleParser';
 import { generatePrompt } from './parser/promptGenerator';
@@ -158,4 +159,16 @@ function registerIpcHandlers() {
   ipcMain.handle(IPC.GENERATE_PROMPT, (_e, text: string) => generatePrompt(text));
 
   ipcMain.handle(IPC.COPY_TO_CLIPBOARD, (_e, text: string) => clipboard.writeText(text));
+
+  ipcMain.handle(IPC.GET_WATERFALL_PROGRESS, (_e, bankId: number) =>
+    getWaterfallProgress(requirePosInt(bankId, 'bankId'))
+  );
+
+  ipcMain.handle(IPC.ADVANCE_WATERFALL, (_e, bankId: number, dailyCount: number, totalQuestions: number) =>
+    advanceWaterfall(
+      requirePosInt(bankId, 'bankId'),
+      requirePosInt(dailyCount, 'dailyCount'),
+      requirePosInt(totalQuestions, 'totalQuestions')
+    )
+  );
 }

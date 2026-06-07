@@ -129,4 +129,6 @@ export interface ElectronAPI {
   copyToClipboard: (text: string) => Promise<void>;
   onPanelStateChanged: (cb: (open: boolean) => void) => () => void;
   exportBank: (bankId: number) => Promise<void>;
+  getWaterfallProgress: (bankId: number) => Promise<WaterfallProgress | null>;
+  advanceWaterfall: (bankId: number, dailyCount: number, totalQuestions: number) => Promise<WaterfallProgress>;
 }
