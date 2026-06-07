@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { ParsedQuestion } from '../types';
 
-type ImportStep = 'idle' | 'parsing' | 'preview' | 'ai-fallback' | 'naming' | 'saving';
+type ImportStep = 'idle' | 'parsing' | 'partial' | 'preview' | 'ai-fallback' | 'naming' | 'saving';
 
 interface Props {
   onComplete: () => void;
@@ -17,6 +17,7 @@ export function ImportFlow({ onComplete, onCancel }: Props) {
   const [pasteJson, setPasteJson] = useState('');
   const [error, setError] = useState('');
   const [prompt, setPrompt] = useState('');
+  const [expectedCount, setExpectedCount] = useState(0);
 
   const handlePickFile = async () => {
     setError('');
@@ -46,13 +47,24 @@ export function ImportFlow({ onComplete, onCancel }: Props) {
 
       // PDF / DOCX / TXT — run rule-based parser
       const parsed = await window.electronAPI.parseFile(result.text);
-      if (parsed.success && parsed.questions.length > 0) {
-        setParsedQuestions(parsed.questions);
-        setStep('preview');
-      } else {
+
+      // Nothing recognized at all — go straight to the AI helper.
+      if (parsed.questions.length === 0) {
         const p = await window.electronAPI.generatePrompt(result.text);
         setPrompt(p);
         setStep('ai-fallback');
+        return;
+      }
+
+      setParsedQuestions(parsed.questions);
+      setExpectedCount(parsed.expectedCount);
+
+      // Some questions were dropped (e.g. a PDF whose option letters didn't
+      // survive text extraction) — let the user choose how to proceed.
+      if (parsed.expectedCount > parsed.questions.length) {
+        setStep('partial');
+      } else {
+        setStep('preview');
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error reading file.';
@@ -63,6 +75,14 @@ export function ImportFlow({ onComplete, onCancel }: Props) {
 
   const handleCopyPrompt = async () => {
     await window.electronAPI.copyToClipboard(prompt);
+  };
+
+  // From the partial-parse screen: send the full extracted text to the AI helper
+  // so every question (including the ones the rule parser dropped) gets captured.
+  const handleParseAllWithAI = async () => {
+    const p = await window.electronAPI.generatePrompt(extractedText);
+    setPrompt(p);
+    setStep('ai-fallback');
   };
 
   const handlePasteImport = async () => {
@@ -111,6 +131,33 @@ export function ImportFlow({ onComplete, onCancel }: Props) {
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn btn-primary" onClick={handlePickFile} disabled={step === 'parsing'}>
             {step === 'parsing' ? '⏳ Parsing...' : '📁 Choose File'}
+          </button>
+          <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'partial') {
+    const dropped = expectedCount - parsedQuestions.length;
+    return (
+      <div style={{ maxWidth: 560 }}>
+        <h2 style={{ marginBottom: 8 }}>Some questions couldn&apos;t be read</h2>
+        <p style={{ color: '#c9d4e8', fontSize: 13, lineHeight: 1.6, marginBottom: 8 }}>
+          ExamDump automatically read <strong>{parsedQuestions.length}</strong> of{' '}
+          <strong>{expectedCount}</strong> questions in <strong>{fileName}</strong>.
+        </p>
+        <p style={{ color: '#8b9cb0', fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
+          The other <strong>{dropped}</strong> couldn&apos;t be parsed from this PDF&apos;s layout
+          (usually the A/B/C/D option letters didn&apos;t survive text extraction). You can keep the{' '}
+          {parsedQuestions.length} that worked, or use the AI helper to capture all {expectedCount}.
+        </p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn btn-primary" onClick={handleParseAllWithAI}>
+            🤖 Parse all {expectedCount} with AI
+          </button>
+          <button className="btn btn-secondary" onClick={() => setStep('preview')}>
+            Use these {parsedQuestions.length}
           </button>
           <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
         </div>

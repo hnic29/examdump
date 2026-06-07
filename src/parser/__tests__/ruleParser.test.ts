@@ -98,4 +98,29 @@ D. Class D`;
     const result = parseExamDump(text);
     expect(result.questions[0].type).toBe('multi_select');
   });
+
+  it('reports expectedCount for fully parsed dumps', () => {
+    const result = parseExamDump(SAMPLE);
+    expect(result.expectedCount).toBe(2);
+    expect(result.questions).toHaveLength(2);
+  });
+
+  it('counts question blocks it could not parse in expectedCount', () => {
+    // Q2 has lost its A./B. option-letter prefixes (real-world PDF extraction
+    // failure) so it cannot be parsed — but it is still an intended question.
+    const text = `Question: 1 |
+A good question?
+A. Option A
+B. Option B
+Answer: A
+
+Question: 2 |
+This question lost its option letters during extraction
+European Union (EU) AI Act
+International Organization for Standardization (ISO)
+Answer: C`;
+    const result = parseExamDump(text);
+    expect(result.expectedCount).toBe(2);
+    expect(result.questions).toHaveLength(1);
+  });
 });

@@ -9,9 +9,11 @@ const TRUE_RE = /^true\.?$/i;
 const FALSE_RE = /^false\.?$/i;
 const MULTI_SELECT_RE = /select\s+(all|two|three|\d+)|choose\s+(all|two|three|\d+)/i;
 
+const QUESTION_HEADER_RE = /^Question:\s*\d+/i;
+
 export function parseExamDump(text: string): ParseResult {
   const blocks = text.split(/(?=Question:\s*\d+)/i).map(b => b.trim()).filter(Boolean);
-  if (blocks.length === 0) return { success: false, questions: [], confidence: 0 };
+  if (blocks.length === 0) return { success: false, questions: [], confidence: 0, expectedCount: 0 };
 
   const questions: ParsedQuestion[] = [];
   let recognized = 0;
@@ -21,8 +23,11 @@ export function parseExamDump(text: string): ParseResult {
     if (q) { questions.push(q); recognized++; }
   }
 
+  // Count blocks that were clearly intended as questions, even if parsing failed
+  // (e.g. a PDF whose option-letter prefixes were dropped during text extraction).
+  const expectedCount = blocks.filter(b => QUESTION_HEADER_RE.test(b)).length;
   const confidence = recognized / blocks.length;
-  return { success: confidence >= 0.5, questions, confidence };
+  return { success: confidence >= 0.5, questions, confidence, expectedCount };
 }
 
 function parseBlock(block: string): ParsedQuestion | null {

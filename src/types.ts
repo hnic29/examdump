@@ -72,6 +72,8 @@ export interface ParseResult {
   success: boolean;
   questions: ParsedQuestion[];
   confidence: number;
+  /** Number of blocks that look like questions ("Question: N"), whether or not they parsed successfully. */
+  expectedCount: number;
 }
 
 export interface CreateAttemptInput {
