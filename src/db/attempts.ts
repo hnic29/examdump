@@ -30,3 +30,14 @@ export function getAttemptById(attemptId: number): QuizAttempt | null {
   const row = getDb().prepare('SELECT * FROM quiz_attempts WHERE id = ?').get(attemptId) as AttemptRow | undefined;
   return row ? toAttempt(row) : null;
 }
+
+export function getActiveAttempt(bankId: number): QuizAttempt | null {
+  const row = getDb().prepare(
+    'SELECT * FROM quiz_attempts WHERE bank_id = ? AND completed_at IS NULL ORDER BY started_at DESC, id DESC LIMIT 1'
+  ).get(bankId) as AttemptRow | undefined;
+  return row ? toAttempt(row) : null;
+}
+
+export function deleteAttempt(attemptId: number): void {
+  getDb().prepare('DELETE FROM quiz_attempts WHERE id = ?').run(attemptId);
+}
