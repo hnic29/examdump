@@ -2,7 +2,7 @@ import React, { useState, useEffect, useReducer, useRef } from 'react';
 import { QuizSetup } from './QuizSetup';
 import { AnswerFeedback } from './AnswerFeedback';
 import { useTimer } from '../hooks/useTimer';
-import type { Question, QuizStartConfig, TimedMode } from '../types';
+import type { Question, QuizStartConfig, TimedMode, QuizAttempt } from '../types';
 
 type QuizPhase = 'setup' | 'active' | 'feedback';
 
@@ -91,10 +91,27 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
     questionStartTime: Date.now(),
   });
   const [questionCount, setQuestionCount] = useState(0);
+  const [checkingResume, setCheckingResume] = useState(true);
+  const [resumeAttempt, setResumeAttempt] = useState<QuizAttempt | null>(null);
+  const [resumeAnswered, setResumeAnswered] = useState(0);
   const finishingRef = useRef(false);
 
   useEffect(() => {
-    window.electronAPI.loadQuestions(bankId).then(qs => setQuestionCount(qs.length));
+    let cancelled = false;
+    (async () => {
+      const qs = await window.electronAPI.loadQuestions(bankId);
+      if (!cancelled) setQuestionCount(qs.length);
+      const active = await window.electronAPI.getActiveAttempt(bankId);
+      if (cancelled) return;
+      if (active) {
+        const saved = await window.electronAPI.getResponses(active.id);
+        if (cancelled) return;
+        setResumeAttempt(active);
+        setResumeAnswered(saved.length);
+      }
+      setCheckingResume(false);
+    })();
+    return () => { cancelled = true; };
   }, [bankId]);
 
   const handleTotalExpire = () => {
@@ -124,6 +141,37 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
       perQTimer.start();
     }
   }, [state.currentIndex, state.phase]);
+
+  const handleContinue = async () => {
+    if (!resumeAttempt) return;
+    const all = await window.electronAPI.loadQuestions(bankId);
+    const questions = all.slice(0, resumeAttempt.totalQuestions);
+    const saved = await window.electronAPI.getResponses(resumeAttempt.id);
+    const responses: StoredResponse[] = saved.map(r => ({
+      questionId: r.questionId,
+      selectedAnswers: r.selectedAnswers,
+      isCorrect: r.isCorrect,
+      timeTaken: r.timeTaken,
+    }));
+    const { currentIndex, complete } = resumePosition(questions.length, responses.length);
+    const config: QuizConfig = {
+      timedMode: resumeAttempt.timedMode,
+      totalTimeLimit: resumeAttempt.totalTimeLimit,
+      perQuestionTimeLimit: resumeAttempt.perQuestionTimeLimit,
+      showAnswerImmediately: resumeAttempt.showAnswerImmediately,
+    };
+    if (complete) {
+      finishQuiz(resumeAttempt.id, responses, questions);
+      return;
+    }
+    dispatch({ type: 'RESUME', questions, attemptId: resumeAttempt.id, config, responses, currentIndex });
+    if (config.totalTimeLimit) { totalTimer.reset(config.totalTimeLimit); totalTimer.start(); }
+  };
+
+  const handleStartNew = async () => {
+    if (resumeAttempt) await window.electronAPI.deleteAttempt(resumeAttempt.id);
+    setResumeAttempt(null);
+  };
 
   const handleStart = async (cfg: QuizStartConfig) => {
     const allQuestions = await window.electronAPI.loadQuestions(bankId);
@@ -205,6 +253,28 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
     if (!state.paused) dispatch({ type: 'TOGGLE_PAUSE' });
     await window.electronAPI.openPanel(url);
   };
+
+  if (checkingResume) {
+    return <div style={{ color: '#8b9cb0' }}>Loading…</div>;
+  }
+
+  if (state.phase === 'setup' && resumeAttempt) {
+    return (
+      <div className="modal-overlay">
+        <div className="modal">
+          <h2>Unfinished quiz</h2>
+          <p style={{ color: '#8b9cb0', fontSize: 13, marginBottom: 20 }}>
+            You answered {resumeAnswered} of {resumeAttempt.totalQuestions} questions. Pick up where you left off?
+          </p>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button className="btn btn-primary" onClick={handleContinue}>▶ Continue</button>
+            <button className="btn btn-secondary" onClick={handleStartNew}>↻ Start New</button>
+            <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (state.phase === 'setup') {
     return <QuizSetup bankId={bankId} questionCount={questionCount} onStart={handleStart} onCancel={onCancel} />;
