@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { reducer } from '../ActiveQuiz';
+import { reducer, resumePosition } from '../ActiveQuiz';
 import type { Question } from '../../types';
 
 const baseConfig = { timedMode: 'none' as const, totalTimeLimit: null, perQuestionTimeLimit: null, showAnswerImmediately: true };
@@ -40,5 +40,28 @@ describe('reducer', () => {
   it('TOGGLE_PAUSE flips paused', () => {
     expect(reducer(baseState, { type: 'TOGGLE_PAUSE' }).paused).toBe(true);
     expect(reducer({ ...baseState, paused: true }, { type: 'TOGGLE_PAUSE' }).paused).toBe(false);
+  });
+});
+
+describe('resumePosition', () => {
+  it('returns the next unanswered index mid-quiz', () => {
+    expect(resumePosition(10, 4)).toEqual({ currentIndex: 4, complete: false });
+  });
+  it('marks complete when all questions answered', () => {
+    expect(resumePosition(10, 10)).toEqual({ currentIndex: 10, complete: true });
+  });
+  it('marks complete when response count exceeds total', () => {
+    expect(resumePosition(10, 11)).toEqual({ currentIndex: 10, complete: true });
+  });
+});
+
+describe('RESUME action', () => {
+  it('enters active phase with the provided index and responses', () => {
+    const responses = [{ questionId: 1, selectedAnswers: ['A'], isCorrect: true, timeTaken: 5 }];
+    const next = reducer(baseState, { type: 'RESUME', questions: [], attemptId: 7, config: baseConfig, responses, currentIndex: 1 });
+    expect(next.phase).toBe('active');
+    expect(next.currentIndex).toBe(1);
+    expect(next.attemptId).toBe(7);
+    expect(next.responses).toHaveLength(1);
   });
 });

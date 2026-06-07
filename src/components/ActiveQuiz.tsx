@@ -35,6 +35,7 @@ interface QuizState {
 
 type QuizAction =
   | { type: 'START'; questions: Question[]; attemptId: number; config: QuizConfig }
+  | { type: 'RESUME'; questions: Question[]; attemptId: number; config: QuizConfig; responses: StoredResponse[]; currentIndex: number }
   | { type: 'SELECT'; answers: string[] }
   | { type: 'SUBMIT'; response: StoredResponse; showImmediately: boolean }
   | { type: 'NEXT' }
@@ -44,6 +45,8 @@ export function reducer(state: QuizState, action: QuizAction): QuizState {
   switch (action.type) {
     case 'START':
       return { ...state, phase: 'active', questions: action.questions, currentIndex: 0, selectedAnswers: [], paused: false, attemptId: action.attemptId, config: action.config, responses: [], lastResponse: null, questionStartTime: Date.now() };
+    case 'RESUME':
+      return { ...state, phase: 'active', questions: action.questions, currentIndex: action.currentIndex, selectedAnswers: [], paused: false, attemptId: action.attemptId, config: action.config, responses: action.responses, lastResponse: null, questionStartTime: Date.now() };
     case 'SELECT':
       return { ...state, selectedAnswers: action.answers };
     case 'SUBMIT': {
@@ -318,4 +321,9 @@ function fmt(s: number): string {
 
 function arraysMatchSorted(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
+export function resumePosition(totalQuestions: number, responseCount: number): { currentIndex: number; complete: boolean } {
+  if (responseCount >= totalQuestions) return { currentIndex: totalQuestions, complete: true };
+  return { currentIndex: responseCount, complete: false };
 }
