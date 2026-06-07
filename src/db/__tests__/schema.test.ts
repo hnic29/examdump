@@ -35,4 +35,12 @@ describe('createDb', () => {
     const db = initDb(':memory:');
     expect(getDb()).toBe(db);
   });
+
+  it('creates waterfall_progress table', () => {
+    const db = createDb(':memory:');
+    const tables = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+    ).all() as { name: string }[];
+    expect(tables.map(t => t.name)).toContain('waterfall_progress');
+  });
 });

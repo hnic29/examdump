@@ -64,5 +64,11 @@ function runMigrations(db: Database.Database): void {
       is_correct INTEGER NOT NULL,
       time_taken INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS waterfall_progress (
+      bank_id INTEGER PRIMARY KEY REFERENCES question_banks(id) ON DELETE CASCADE,
+      introduced_count INTEGER NOT NULL,
+      last_session_date TEXT NOT NULL
+    );
   `);
 }
