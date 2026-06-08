@@ -12,12 +12,14 @@ import { extractText } from './parser/fileExtractor';
 import { parseExamDump } from './parser/ruleParser';
 import { generatePrompt } from './parser/promptGenerator';
 import { openPanel, closePanel, setPanelRatio } from './browser/panel';
+import { createSplashWindow } from './splash';
 import { IPC } from './ipc/channels';
 import type { ParsedQuestion, CreateAttemptInput, SaveResponseInput, CompleteAttemptInput } from './types';
 
 if (started) app.quit();
 
 let mainWindow: BrowserWindow | null = null;
+const SPLASH_MS = 5000;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -25,6 +27,7 @@ function createWindow() {
     height: 800,
     minWidth: 900,
     minHeight: 600,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -42,7 +45,12 @@ function createWindow() {
 app.on('ready', () => {
   initDb(path.join(app.getPath('userData'), 'examdump.db'));
   registerIpcHandlers();
+  const splash = createSplashWindow();
   createWindow();
+  setTimeout(() => {
+    if (!splash.isDestroyed()) splash.close();
+    mainWindow?.show();
+  }, SPLASH_MS);
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
