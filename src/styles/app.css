@@ -69,7 +69,7 @@ body {
 
 .sidebar-nav-btn:hover { background: #232b3e; color: #e0e0e0; }
 
-.main-panel { flex: 1; overflow-y: auto; padding: 24px; }
+.main-panel { flex: 1; overflow-y: auto; padding: 24px; padding-bottom: 36px; }
 
 .btn {
   padding: 8px 18px;
@@ -184,4 +184,25 @@ body {
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.status-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 24px;
+  z-index: 250;
+  background: #1a1f2e;
+  border-top: 1px solid #2d3a52;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 12px;
+}
+
+.status-clock {
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 11px;
+  color: #8b9cb0;
 }

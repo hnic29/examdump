@@ -5,6 +5,7 @@ import { ImportFlow } from './components/ImportFlow';
 import { ActiveQuiz } from './components/ActiveQuiz';
 import { Results } from './components/Results';
 import { History } from './components/History';
+import { StatusBar } from './components/StatusBar';
 import type { QuestionBank } from './types';
 
 type AppView =
@@ -94,6 +95,7 @@ export function App() {
           </button>
         </div>
       )}
+      <StatusBar />
     </div>
   );
 }

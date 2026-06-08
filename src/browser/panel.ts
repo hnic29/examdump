@@ -39,10 +39,11 @@ export function isPanelOpen(): boolean {
 }
 
 const TOOLBAR_HEIGHT = 44; // matches .panel-toolbar height in app.css
+const STATUS_BAR_HEIGHT = 24; // matches .status-bar height in app.css
 
 function sizePanelToWindow(win: BrowserWindow): void {
   if (!panel) return;
   const [w, h] = win.getContentSize();
   const panelW = Math.floor(w * 0.6);
-  panel.setBounds({ x: w - panelW, y: TOOLBAR_HEIGHT, width: panelW, height: h - TOOLBAR_HEIGHT });
+  panel.setBounds({ x: w - panelW, y: TOOLBAR_HEIGHT, width: panelW, height: h - TOOLBAR_HEIGHT - STATUS_BAR_HEIGHT });
 }
