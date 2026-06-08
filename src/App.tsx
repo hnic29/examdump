@@ -5,6 +5,7 @@ import { ImportFlow } from './components/ImportFlow';
 import { ActiveQuiz } from './components/ActiveQuiz';
 import { Results } from './components/Results';
 import { History } from './components/History';
+import { Changelog } from './components/Changelog';
 import { StatusBar } from './components/StatusBar';
 import type { QuestionBank } from './types';
 
@@ -13,7 +14,8 @@ type AppView =
   | { screen: 'import' }
   | { screen: 'quiz'; bankId: number }
   | { screen: 'results'; attemptId: number; bankId: number }
-  | { screen: 'history'; bankId: number };
+  | { screen: 'history'; bankId: number }
+  | { screen: 'changelog' };
 
 export function App() {
   const [banks, setBanks] = useState<QuestionBank[]>([]);
@@ -71,6 +73,7 @@ export function App() {
         onSelectBank={(id) => setView({ screen: 'library', selectedBankId: id })}
         onImport={() => setView({ screen: 'import' })}
         onHistory={(bankId) => setView({ screen: 'history', bankId })}
+        onChangelog={() => setView({ screen: 'changelog' })}
       />
 
       <main className="main-panel">
@@ -113,6 +116,9 @@ export function App() {
             bankId={view.bankId}
             onBack={() => setView({ screen: 'library', selectedBankId: view.bankId })}
           />
+        )}
+        {view.screen === 'changelog' && (
+          <Changelog onBack={() => setView({ screen: 'library', selectedBankId: null })} />
         )}
       </main>
 

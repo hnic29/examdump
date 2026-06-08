@@ -7,9 +7,10 @@ interface Props {
   onSelectBank: (id: number) => void;
   onImport: () => void;
   onHistory: (bankId: number) => void;
+  onChangelog: () => void;
 }
 
-export function Sidebar({ banks, selectedBankId, onSelectBank, onImport, onHistory }: Props) {
+export function Sidebar({ banks, selectedBankId, onSelectBank, onImport, onHistory, onChangelog }: Props) {
   return (
     <div className="sidebar">
       <div className="sidebar-header">ExamDump</div>
@@ -47,6 +48,9 @@ export function Sidebar({ banks, selectedBankId, onSelectBank, onImport, onHisto
           onClick={() => window.electronAPI.openPanel('https://claude.ai')}
         >
           🤖 AI Helper
+        </button>
+        <button className="sidebar-nav-btn" onClick={onChangelog}>
+          📝 Changelog
         </button>
       </div>
     </div>
