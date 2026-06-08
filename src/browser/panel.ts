@@ -1,4 +1,5 @@
 import { BrowserWindow, WebContentsView } from 'electron';
+import { DEFAULT_RATIO, clampRatio } from './ratio';
 
 // panel and resizeListener are module-level singletons — correct for a single-window app.
 // If multiple BrowserWindows are ever added (e.g., macOS multi-window), this must be
@@ -6,6 +7,7 @@ import { BrowserWindow, WebContentsView } from 'electron';
 
 let panel: WebContentsView | null = null;
 let resizeListener: (() => void) | null = null;
+let panelRatio = DEFAULT_RATIO;
 
 export function openPanel(mainWindow: BrowserWindow, url: string): void {
   if (!panel) {
@@ -25,6 +27,7 @@ export function openPanel(mainWindow: BrowserWindow, url: string): void {
 
 export function closePanel(mainWindow: BrowserWindow): void {
   if (!panel) return;
+  panelRatio = DEFAULT_RATIO;
   if (resizeListener) {
     mainWindow.removeListener('resize', resizeListener);
     resizeListener = null;
@@ -44,6 +47,11 @@ const STATUS_BAR_HEIGHT = 24; // matches .status-bar height in app.css
 function sizePanelToWindow(win: BrowserWindow): void {
   if (!panel) return;
   const [w, h] = win.getContentSize();
-  const panelW = Math.floor(w * 0.6);
+  const panelW = Math.floor(w * panelRatio);
   panel.setBounds({ x: w - panelW, y: TOOLBAR_HEIGHT, width: panelW, height: h - TOOLBAR_HEIGHT - STATUS_BAR_HEIGHT });
+}
+
+export function setPanelRatio(mainWindow: BrowserWindow, ratio: number): void {
+  panelRatio = clampRatio(ratio);
+  sizePanelToWindow(mainWindow);
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Library } from './components/Library';
 import { ImportFlow } from './components/ImportFlow';
@@ -19,6 +19,9 @@ export function App() {
   const [banks, setBanks] = useState<QuestionBank[]>([]);
   const [view, setView] = useState<AppView>({ screen: 'library', selectedBankId: null });
   const [panelOpen, setPanelOpen] = useState(false);
+  const [dragRatio, setDragRatio] = useState(0.6);
+  const draggingRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
 
   const refreshBanks = useCallback(async () => {
     setBanks(await window.electronAPI.loadBanks());
@@ -30,7 +33,35 @@ export function App() {
     return unsub;
   }, [refreshBanks]);
 
+  useEffect(() => {
+    if (panelOpen) setDragRatio(0.6);
+  }, [panelOpen]);
+
   const closePanel = () => window.electronAPI.closePanel();
+
+  const onDividerDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    draggingRef.current = true;
+    const onMove = (ev: MouseEvent) => {
+      if (!draggingRef.current) return;
+      const ratio = (window.innerWidth - ev.clientX) / window.innerWidth;
+      const clamped = Math.min(0.75, Math.max(0.25, ratio));
+      setDragRatio(clamped);
+      if (rafRef.current == null) {
+        rafRef.current = requestAnimationFrame(() => {
+          rafRef.current = null;
+          window.electronAPI.resizePanel(clamped);
+        });
+      }
+    };
+    const onUp = () => {
+      draggingRef.current = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
 
   return (
     <div className="app-shell">
@@ -85,6 +116,13 @@ export function App() {
         )}
       </main>
 
+      {panelOpen && (
+        <div
+          className="panel-divider"
+          style={{ left: `calc(${(1 - dragRatio) * 100}% - 3px)` }}
+          onMouseDown={onDividerDown}
+        />
+      )}
       {panelOpen && (
         <div className="panel-toolbar">
           <span className="panel-toolbar-label">

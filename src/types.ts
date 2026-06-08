@@ -127,6 +127,7 @@ export interface ElectronAPI {
   getResponses: (attemptId: number) => Promise<QuestionResponse[]>;
   openPanel: (url: string) => Promise<void>;
   closePanel: () => Promise<void>;
+  resizePanel: (ratio: number) => Promise<void>;
   generatePrompt: (text: string) => Promise<string>;
   copyToClipboard: (text: string) => Promise<void>;
   onPanelStateChanged: (cb: (open: boolean) => void) => () => void;

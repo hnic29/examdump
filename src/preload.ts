@@ -16,6 +16,7 @@ const api: ElectronAPI = {
   getResponses: (attemptId) => ipcRenderer.invoke(IPC.GET_RESPONSES, attemptId),
   openPanel: (url) => ipcRenderer.invoke(IPC.OPEN_PANEL, url),
   closePanel: () => ipcRenderer.invoke(IPC.CLOSE_PANEL),
+  resizePanel: (ratio) => ipcRenderer.invoke(IPC.RESIZE_PANEL, ratio),
   generatePrompt: (text) => ipcRenderer.invoke(IPC.GENERATE_PROMPT, text),
   copyToClipboard: (text) => ipcRenderer.invoke(IPC.COPY_TO_CLIPBOARD, text),
   exportBank: (bankId) => ipcRenderer.invoke(IPC.EXPORT_BANK, bankId),

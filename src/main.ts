@@ -11,7 +11,7 @@ import { getWaterfallProgress, advanceWaterfall } from './db/waterfall';
 import { extractText } from './parser/fileExtractor';
 import { parseExamDump } from './parser/ruleParser';
 import { generatePrompt } from './parser/promptGenerator';
-import { openPanel, closePanel } from './browser/panel';
+import { openPanel, closePanel, setPanelRatio } from './browser/panel';
 import { IPC } from './ipc/channels';
 import type { ParsedQuestion, CreateAttemptInput, SaveResponseInput, CompleteAttemptInput } from './types';
 
@@ -175,4 +175,8 @@ function registerIpcHandlers() {
   ipcMain.handle(IPC.GET_ACTIVE_ATTEMPT, (_e, bankId: number) => getActiveAttempt(requirePosInt(bankId, 'bankId')));
 
   ipcMain.handle(IPC.DELETE_ATTEMPT, (_e, attemptId: number) => deleteAttempt(requirePosInt(attemptId, 'attemptId')));
+
+  ipcMain.handle(IPC.RESIZE_PANEL, (_e, ratio: number) => {
+    if (mainWindow && Number.isFinite(ratio)) setPanelRatio(mainWindow, ratio);
+  });
 }

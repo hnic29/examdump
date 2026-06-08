@@ -206,3 +206,15 @@ body {
   font-size: 11px;
   color: #8b9cb0;
 }
+
+.panel-divider {
+  position: fixed;
+  top: 44px;
+  bottom: 24px;
+  width: 6px;
+  z-index: 260;
+  cursor: col-resize;
+  background: #2d3a52;
+  opacity: 0.6;
+}
+.panel-divider:hover, .panel-divider:active { background: #2196f3; opacity: 1; }
