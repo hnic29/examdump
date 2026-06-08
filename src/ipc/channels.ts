@@ -11,6 +11,7 @@ export const IPC = {
   GET_HISTORY: 'get-history',
   GET_RESPONSES: 'get-responses',
   OPEN_PANEL: 'open-panel',
+  SET_AI_SERVICE: 'set-ai-service',
   CLOSE_PANEL: 'close-panel',
   GENERATE_PROMPT: 'generate-prompt',
   COPY_TO_CLIPBOARD: 'copy-to-clipboard',

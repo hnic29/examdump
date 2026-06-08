@@ -1,3 +1,5 @@
+import type { AiService } from './browser/services';
+
 export type QuestionType = 'multiple_choice' | 'true_false' | 'multi_select';
 export type TimedMode = 'none' | 'total' | 'per_question' | 'both';
 
@@ -126,6 +128,7 @@ export interface ElectronAPI {
   getHistory: (bankId: number) => Promise<QuizAttempt[]>;
   getResponses: (attemptId: number) => Promise<QuestionResponse[]>;
   openPanel: (url: string) => Promise<void>;
+  setAiService: (service: AiService) => Promise<void>;
   closePanel: () => Promise<void>;
   resizePanel: (ratio: number) => Promise<void>;
   generatePrompt: (text: string) => Promise<string>;

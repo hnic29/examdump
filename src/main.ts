@@ -11,7 +11,8 @@ import { getWaterfallProgress, advanceWaterfall } from './db/waterfall';
 import { extractText } from './parser/fileExtractor';
 import { parseExamDump } from './parser/ruleParser';
 import { generatePrompt } from './parser/promptGenerator';
-import { openPanel, closePanel, setPanelRatio } from './browser/panel';
+import { showReference, showAiService, closePanel, setPanelRatio } from './browser/panel';
+import { isAiService } from './browser/services';
 import { createSplashWindow } from './splash';
 import { IPC } from './ipc/channels';
 import type { ParsedQuestion, CreateAttemptInput, SaveResponseInput, CompleteAttemptInput } from './types';
@@ -154,7 +155,13 @@ function registerIpcHandlers() {
     let parsed: URL;
     try { parsed = new URL(url); } catch { return; }
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return;
-    openPanel(mainWindow, parsed.toString());
+    showReference(mainWindow, parsed.toString());
+    mainWindow.webContents.send(IPC.PANEL_STATE_CHANGED, true);
+  });
+
+  ipcMain.handle(IPC.SET_AI_SERVICE, (_e, service: string) => {
+    if (!mainWindow || !isAiService(service)) return;
+    showAiService(mainWindow, service);
     mainWindow.webContents.send(IPC.PANEL_STATE_CHANGED, true);
   });
 

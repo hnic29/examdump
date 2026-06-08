@@ -288,7 +288,7 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
   const perQSecs = state.config.perQuestionTimeLimit;
 
   return (
-    <div style={{ maxWidth: 680 }}>
+    <div style={{ maxWidth: 760 }}>
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <span style={{ color: '#8b9cb0', fontSize: 12 }}>
@@ -359,16 +359,16 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
               {question.questionType === 'multiple_choice' ? 'Multiple Choice' : question.questionType === 'true_false' ? 'True / False' : 'Select All That Apply'}
             </span>
           </div>
-          <p style={{ fontSize: 15, lineHeight: 1.6, marginBottom: 16 }}>{question.questionText}</p>
+          <p style={{ fontSize: 19, lineHeight: 1.6, marginBottom: 18 }}>{question.questionText}</p>
           {question.questionType === 'multi_select' && (
-            <p style={{ fontSize: 11, color: '#8b9cb0', marginBottom: 10 }}>Select all that apply</p>
+            <p style={{ fontSize: 13, color: '#8b9cb0', marginBottom: 10 }}>Select all that apply</p>
           )}
           {question.options.map(opt => {
             const sel = state.selectedAnswers.includes(opt.id);
             return (
-              <div key={opt.id} onClick={() => handleSelectAnswer(opt.id)} style={{ display: 'flex', gap: 10, padding: '10px 12px', borderRadius: 6, border: `1px solid ${sel ? '#2196f3' : '#2d3a52'}`, background: sel ? '#2196f320' : '#1a1f2e', marginBottom: 6, cursor: 'pointer' }}>
-                <div style={{ width: 22, height: 22, borderRadius: 4, background: sel ? '#2196f3' : '#2d3a52', color: sel ? '#fff' : '#8b9cb0', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{opt.id}</div>
-                <div style={{ fontSize: 13, paddingTop: 3 }}>{opt.text}</div>
+              <div key={opt.id} onClick={() => handleSelectAnswer(opt.id)} style={{ display: 'flex', gap: 12, padding: '13px 15px', borderRadius: 6, border: `1px solid ${sel ? '#2196f3' : '#2d3a52'}`, background: sel ? '#2196f320' : '#1a1f2e', marginBottom: 8, cursor: 'pointer' }}>
+                <div style={{ width: 27, height: 27, borderRadius: 4, background: sel ? '#2196f3' : '#2d3a52', color: sel ? '#fff' : '#8b9cb0', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{opt.id}</div>
+                <div style={{ fontSize: 16, lineHeight: 1.5, paddingTop: 3 }}>{opt.text}</div>
               </div>
             );
           })}

@@ -36,11 +36,11 @@ export function AnswerFeedback({ question, response, onNext, onOpenLink }: Props
           else if (!isSelected && isCorrect) { bg = '#4caf5010'; border = '#4caf5060'; }
 
           return (
-            <div key={opt.id} style={{ display: 'flex', gap: 10, padding: '9px 12px', borderRadius: 6, border: `1px solid ${border}`, background: bg, marginBottom: 6, color }}>
-              <div style={{ width: 22, height: 22, borderRadius: 4, background: border, color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{opt.id}</div>
-              <div style={{ fontSize: 13, paddingTop: 3 }}>
+            <div key={opt.id} style={{ display: 'flex', gap: 12, padding: '12px 15px', borderRadius: 6, border: `1px solid ${border}`, background: bg, marginBottom: 8, color }}>
+              <div style={{ width: 27, height: 27, borderRadius: 4, background: border, color: '#fff', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{opt.id}</div>
+              <div style={{ fontSize: 16, lineHeight: 1.5, paddingTop: 3 }}>
                 {opt.text}
-                {!isSelected && isCorrect && <span style={{ color: '#4caf50', fontSize: 11, marginLeft: 6 }}>← correct</span>}
+                {!isSelected && isCorrect && <span style={{ color: '#4caf50', fontSize: 13, marginLeft: 6 }}>← correct</span>}
               </div>
             </div>
           );
@@ -50,7 +50,7 @@ export function AnswerFeedback({ question, response, onNext, onOpenLink }: Props
       {question.explanation && (
         <div style={{ borderLeft: `3px solid ${correct ? '#4caf50' : '#f44336'}`, background: '#1e2535', borderRadius: '0 6px 6px 0', padding: '10px 14px', marginBottom: 12, maxHeight: 180, overflowY: 'auto' }}>
           <div style={{ fontSize: 10, color: '#8b9cb0', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Explanation</div>
-          <div style={{ fontSize: 12, color: '#c9d4e8', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{question.explanation}</div>
+          <div style={{ fontSize: 15, color: '#c9d4e8', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{question.explanation}</div>
         </div>
       )}
 

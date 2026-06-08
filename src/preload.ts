@@ -15,6 +15,7 @@ const api: ElectronAPI = {
   getHistory: (bankId) => ipcRenderer.invoke(IPC.GET_HISTORY, bankId),
   getResponses: (attemptId) => ipcRenderer.invoke(IPC.GET_RESPONSES, attemptId),
   openPanel: (url) => ipcRenderer.invoke(IPC.OPEN_PANEL, url),
+  setAiService: (service) => ipcRenderer.invoke(IPC.SET_AI_SERVICE, service),
   closePanel: () => ipcRenderer.invoke(IPC.CLOSE_PANEL),
   resizePanel: (ratio) => ipcRenderer.invoke(IPC.RESIZE_PANEL, ratio),
   generatePrompt: (text) => ipcRenderer.invoke(IPC.GENERATE_PROMPT, text),

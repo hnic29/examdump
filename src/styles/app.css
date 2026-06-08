@@ -165,12 +165,51 @@ body {
   gap: 10px;
 }
 
+.panel-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
 .panel-toolbar-label {
   font-size: 12px;
   color: #8b9cb0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.ai-service-selector {
+  display: flex;
+  gap: 4px;
+  background: #11151f;
+  border: 1px solid #2d3a52;
+  border-radius: 7px;
+  padding: 3px;
+  flex-shrink: 0;
+}
+
+.ai-service-btn {
+  background: transparent;
+  color: #8b9cb0;
+  border: none;
+  border-radius: 5px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ai-service-btn:hover {
+  color: #c9d4e8;
+  background: #1e2535;
+}
+
+.ai-service-btn.active {
+  background: #2196f3;
+  color: #fff;
 }
 
 .panel-close-btn {

@@ -7,6 +7,7 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import pkg from './package.json';
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -27,7 +28,8 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    // Name the installer with the app version, e.g. ExamDump-1.2.0-Setup.exe
+    new MakerSquirrel({ setupExe: `ExamDump-${pkg.version}-Setup.exe` }),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
     new MakerDeb({}),

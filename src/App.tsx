@@ -7,6 +7,7 @@ import { Results } from './components/Results';
 import { History } from './components/History';
 import { Changelog } from './components/Changelog';
 import { StatusBar } from './components/StatusBar';
+import { AI_SERVICES, type AiService } from './browser/services';
 import type { QuestionBank } from './types';
 
 type AppView =
@@ -21,6 +22,7 @@ export function App() {
   const [banks, setBanks] = useState<QuestionBank[]>([]);
   const [view, setView] = useState<AppView>({ screen: 'library', selectedBankId: null });
   const [panelOpen, setPanelOpen] = useState(false);
+  const [activeService, setActiveService] = useState<AiService | null>(null);
   const [dragRatio, setDragRatio] = useState(0.6);
   const draggingRef = useRef(false);
   const rafRef = useRef<number | null>(null);
@@ -37,7 +39,13 @@ export function App() {
 
   useEffect(() => {
     if (panelOpen) setDragRatio(0.6);
+    else setActiveService(null);
   }, [panelOpen]);
+
+  const selectAiService = (service: AiService) => {
+    setActiveService(service);
+    window.electronAPI.setAiService(service);
+  };
 
   const closePanel = () => window.electronAPI.closePanel();
 
@@ -74,6 +82,7 @@ export function App() {
         onImport={() => setView({ screen: 'import' })}
         onHistory={(bankId) => setView({ screen: 'history', bankId })}
         onChangelog={() => setView({ screen: 'changelog' })}
+        onAiHelper={() => selectAiService('claude')}
       />
 
       <main className="main-panel">
@@ -131,9 +140,22 @@ export function App() {
       )}
       {panelOpen && (
         <div className="panel-toolbar">
-          <span className="panel-toolbar-label">
-            {view.screen === 'quiz' ? '⏸ Quiz is paused — close this panel to resume' : '🌐 AI / Reference Browser'}
-          </span>
+          <div className="panel-toolbar-left">
+            <div className="ai-service-selector">
+              {AI_SERVICES.map(s => (
+                <button
+                  key={s.id}
+                  className={`ai-service-btn${activeService === s.id ? ' active' : ''}`}
+                  onClick={() => selectAiService(s.id)}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            {view.screen === 'quiz' && (
+              <span className="panel-toolbar-label">⏸ Quiz paused — close panel to resume</span>
+            )}
+          </div>
           <button className="panel-close-btn" onClick={closePanel}>
             {view.screen === 'quiz' ? '✕ Close & Resume Quiz' : '✕ Close Panel'}
           </button>
