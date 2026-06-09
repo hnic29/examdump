@@ -123,4 +123,35 @@ Answer: C`;
     expect(result.expectedCount).toBe(2);
     expect(result.questions).toHaveLength(1);
   });
+
+  it('parses "Question N" headers without a colon', () => {
+    const text = `Question 1   (source: page 2)
+Which protocol is connection-oriented?
+A. UDP
+B. TCP
+Correct Answer: B`;
+    const result = parseExamDump(text);
+    expect(result.questions).toHaveLength(1);
+    expect(result.questions[0].question).toBe('Which protocol is connection-oriented?');
+    expect(result.questions[0].correct_answers).toEqual(['B']);
+  });
+
+  it('recognizes "Correct Answer:" and "Answer(s):" answer lines', () => {
+    const text = `Question 1 |
+Pick one.
+A. Foo
+B. Bar
+Correct Answer: A
+
+Question 2 |
+Pick two. (Choose two.)
+A. Foo
+B. Bar
+C. Baz
+Answer(s): A, C`;
+    const result = parseExamDump(text);
+    expect(result.questions[0].correct_answers).toEqual(['A']);
+    expect(result.questions[1].correct_answers).toEqual(['A', 'C']);
+    expect(result.questions[1].type).toBe('multi_select');
+  });
 });

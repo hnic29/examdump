@@ -1,7 +1,9 @@
 import type { ParsedQuestion, ParseResult, QuestionOption, QuestionLink, QuestionType } from '../types';
 
 const OPTION_RE = /^([A-E])\.\s+(.+)/;
-const ANSWER_RE = /^Answer:\s*([A-E](?:,\s*[A-E])*)/i;
+// Accepts: "Answer: B", "Answer: A, B", "Correct Answer: D",
+// "Correct Answers: A, D", "Answer(s): A,D"
+const ANSWER_RE = /^(?:correct\s+)?answer(?:\(s\)|s)?:\s*([A-E](?:\s*,\s*[A-E])*)/i;
 const EXPLANATION_RE = /^Explanation:\s*/i;
 const LINKS_HEADER_RE = /^Authoritative Links/i;
 const URL_RE = /https?:\/\/[^\s]+/g;
@@ -9,10 +11,11 @@ const TRUE_RE = /^true\.?$/i;
 const FALSE_RE = /^false\.?$/i;
 const MULTI_SELECT_RE = /select\s+(all|two|three|\d+)|choose\s+(all|two|three|\d+)/i;
 
-const QUESTION_HEADER_RE = /^Question:\s*\d+/i;
+// Accepts: "Question: 1", "Question 1", "QUESTION: 1", "Q1"
+const QUESTION_HEADER_RE = /^(?:question|q)\s*:?\s*\d+/i;
 
 export function parseExamDump(text: string): ParseResult {
-  const blocks = text.split(/(?=Question:\s*\d+)/i).map(b => b.trim()).filter(Boolean);
+  const blocks = text.split(/(?=^(?:question|q)\s*:?\s*\d+)/im).map(b => b.trim()).filter(Boolean);
   if (blocks.length === 0) return { success: false, questions: [], confidence: 0, expectedCount: 0 };
 
   const questions: ParsedQuestion[] = [];
@@ -36,7 +39,7 @@ function parseBlock(block: string): ParsedQuestion | null {
 
   let idx = 0;
   // Skip "Question: N ..." header line
-  if (/^Question:\s*\d+/i.test(lines[idx])) idx++;
+  if (QUESTION_HEADER_RE.test(lines[idx])) idx++;
 
   // Collect question text until first option line
   const qLines: string[] = [];
