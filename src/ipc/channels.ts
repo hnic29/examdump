@@ -17,6 +17,7 @@ export const IPC = {
   COPY_TO_CLIPBOARD: 'copy-to-clipboard',
   PANEL_STATE_CHANGED: 'panel-state-changed',
   EXPORT_BANK: 'export-bank',
+  SAVE_GENERATED_JSON: 'save-generated-json',
   RESIZE_PANEL: 'resize-panel',
   GET_WATERFALL_PROGRESS: 'get-waterfall-progress',
   ADVANCE_WATERFALL: 'advance-waterfall',
