@@ -6,7 +6,7 @@ const CORRECT_MARKER_RE = /\s*(?:\[correct\]|✓)\s*$/i;
 // Accepts: "Answer: B", "Answer: A, B", "Correct Answer: D",
 // "Correct Answers: A, D", "Answer(s): A,D"
 const ANSWER_RE = /^(?:correct\s+)?answer(?:\(s\)|s)?:\s*([A-E](?:\s*,\s*[A-E])*)/i;
-const EXPLANATION_RE = /^Explanation:\s*/i;
+const EXPLANATION_RE = /^Explanation:?\s*/i;
 const LINKS_HEADER_RE = /^Authoritative Links/i;
 const URL_RE = /https?:\/\/[^\s]+/g;
 const TRUE_RE = /^true\.?$/i;

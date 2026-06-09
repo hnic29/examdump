@@ -190,4 +190,38 @@ Correct Answer: B`;
     expect(result.questions[0].correct_answers).toEqual(['B']);
     expect(result.questions[0].options[0]).toEqual({ id: 'A', text: 'Foo' });
   });
+
+  it('parses an "Explanation" header without a colon', () => {
+    const text = `Question 1 |
+Pick one.
+A. Foo
+B. Bar
+Correct Answer: B
+Explanation
+Bar is correct because of reasons.`;
+    const result = parseExamDump(text);
+    expect(result.questions[0].explanation).toBe('Bar is correct because of reasons.');
+  });
+
+  it('parses a full app-generated braindump block end to end', () => {
+    const text = `Question 1   (source: page 2)
+Which of the following job roles develops a model from business use cases?
+A. Platform architect
+B. AI risk analyst
+C. MLOps engineer
+D. Data scientist [Correct]
+Correct Answer: D
+Explanation
+A data scientist translates business use cases into ML solutions.`;
+    const result = parseExamDump(text);
+    expect(result.success).toBe(true);
+    expect(result.questions).toHaveLength(1);
+    const q = result.questions[0];
+    expect(q.question).toBe('Which of the following job roles develops a model from business use cases?');
+    expect(q.options).toHaveLength(4);
+    expect(q.options[3]).toEqual({ id: 'D', text: 'Data scientist' });
+    expect(q.correct_answers).toEqual(['D']);
+    expect(q.type).toBe('multiple_choice');
+    expect(q.explanation).toContain('translates business use cases');
+  });
 });
