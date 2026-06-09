@@ -123,4 +123,105 @@ Answer: C`;
     expect(result.expectedCount).toBe(2);
     expect(result.questions).toHaveLength(1);
   });
+
+  it('parses "Question N" headers without a colon', () => {
+    const text = `Question 1   (source: page 2)
+Which protocol is connection-oriented?
+A. UDP
+B. TCP
+Correct Answer: B`;
+    const result = parseExamDump(text);
+    expect(result.questions).toHaveLength(1);
+    expect(result.questions[0].question).toBe('Which protocol is connection-oriented?');
+    expect(result.questions[0].correct_answers).toEqual(['B']);
+  });
+
+  it('recognizes "Correct Answer:" and "Answer(s):" answer lines', () => {
+    const text = `Question 1 |
+Pick one.
+A. Foo
+B. Bar
+Correct Answer: A
+
+Question 2 |
+Pick two. (Choose two.)
+A. Foo
+B. Bar
+C. Baz
+Answer(s): A, C`;
+    const result = parseExamDump(text);
+    expect(result.questions[0].correct_answers).toEqual(['A']);
+    expect(result.questions[1].correct_answers).toEqual(['A', 'C']);
+    expect(result.questions[1].type).toBe('multi_select');
+  });
+
+  it('accepts "A)" option delimiters', () => {
+    const text = `Question 1 |
+Pick one.
+A) Foo
+B) Bar
+Correct Answer: B`;
+    const result = parseExamDump(text);
+    expect(result.questions[0].options).toEqual([
+      { id: 'A', text: 'Foo' },
+      { id: 'B', text: 'Bar' },
+    ]);
+    expect(result.questions[0].correct_answers).toEqual(['B']);
+  });
+
+  it('strips a trailing [Correct] marker and uses it when no answer line', () => {
+    const text = `Question 1 |
+Pick one.
+A. Foo
+B. Bar [Correct]
+C. Baz`;
+    const result = parseExamDump(text);
+    expect(result.questions[0].options[1]).toEqual({ id: 'B', text: 'Bar' });
+    expect(result.questions[0].correct_answers).toEqual(['B']);
+  });
+
+  it('prefers the answer line over inline markers when they disagree', () => {
+    const text = `Question 1 |
+Pick one.
+A. Foo [Correct]
+B. Bar
+Correct Answer: B`;
+    const result = parseExamDump(text);
+    expect(result.questions[0].correct_answers).toEqual(['B']);
+    expect(result.questions[0].options[0]).toEqual({ id: 'A', text: 'Foo' });
+  });
+
+  it('parses an "Explanation" header without a colon', () => {
+    const text = `Question 1 |
+Pick one.
+A. Foo
+B. Bar
+Correct Answer: B
+Explanation
+Bar is correct because of reasons.`;
+    const result = parseExamDump(text);
+    expect(result.questions[0].explanation).toBe('Bar is correct because of reasons.');
+  });
+
+  it('parses a full app-generated braindump block end to end', () => {
+    const text = `Question 1   (source: page 2)
+Which of the following job roles develops a model from business use cases?
+A. Platform architect
+B. AI risk analyst
+C. MLOps engineer
+D. Data scientist [Correct]
+Correct Answer: D
+Explanation
+A data scientist translates business use cases into ML solutions.`;
+    const result = parseExamDump(text);
+    expect(result.success).toBe(true);
+    expect(result.questions).toHaveLength(1);
+    const q = result.questions[0];
+    expect(q.question).toBe('Which of the following job roles develops a model from business use cases?');
+    expect(q.options).toHaveLength(4);
+    expect(q.options[3]).toEqual({ id: 'D', text: 'Data scientist' });
+    expect(q.correct_answers).toEqual(['D']);
+    expect(q.type).toBe('multiple_choice');
+    expect(q.explanation).toContain('translates business use cases');
+  });
 });

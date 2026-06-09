@@ -21,6 +21,7 @@ const api: ElectronAPI = {
   generatePrompt: (text) => ipcRenderer.invoke(IPC.GENERATE_PROMPT, text),
   copyToClipboard: (text) => ipcRenderer.invoke(IPC.COPY_TO_CLIPBOARD, text),
   exportBank: (bankId) => ipcRenderer.invoke(IPC.EXPORT_BANK, bankId),
+  saveGeneratedJson: (json, defaultName) => ipcRenderer.invoke(IPC.SAVE_GENERATED_JSON, json, defaultName),
   getWaterfallProgress: (bankId) => ipcRenderer.invoke(IPC.GET_WATERFALL_PROGRESS, bankId),
   advanceWaterfall: (bankId, dailyCount, totalQuestions) =>
     ipcRenderer.invoke(IPC.ADVANCE_WATERFALL, bankId, dailyCount, totalQuestions),

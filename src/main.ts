@@ -11,6 +11,7 @@ import { getWaterfallProgress, advanceWaterfall } from './db/waterfall';
 import { extractText } from './parser/fileExtractor';
 import { parseExamDump } from './parser/ruleParser';
 import { generatePrompt } from './parser/promptGenerator';
+import { toJsonFileName } from './util/filename';
 import { showReference, showAiService, closePanel, setPanelRatio } from './browser/panel';
 import { isAiService } from './browser/services';
 import { createSplashWindow } from './splash';
@@ -148,6 +149,27 @@ function registerIpcHandlers() {
     });
     if (result.canceled || !result.filePath) return;
     await fs.writeFile(result.filePath, JSON.stringify(exported, null, 2), 'utf-8');
+  });
+
+  ipcMain.handle(IPC.SAVE_GENERATED_JSON, async (_e, json: string, defaultName: string) => {
+    if (!mainWindow) return;
+    if (typeof json !== 'string') throw new Error('Invalid JSON payload.');
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
+      throw new Error('Invalid JSON: could not serialize the generated questions.');
+    }
+    const obj = parsed as { questions?: unknown };
+    if (!obj || !Array.isArray(obj.questions) || obj.questions.length === 0) {
+      throw new Error('Generated JSON has no questions to download.');
+    }
+    const result = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: toJsonFileName(defaultName),
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    });
+    if (result.canceled || !result.filePath) return;
+    await fs.writeFile(result.filePath, json, 'utf-8');
   });
 
   ipcMain.handle(IPC.OPEN_PANEL, (_e, url: string) => {
