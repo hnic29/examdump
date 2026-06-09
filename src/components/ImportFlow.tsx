@@ -18,6 +18,7 @@ export function ImportFlow({ onComplete, onCancel }: Props) {
   const [error, setError] = useState('');
   const [prompt, setPrompt] = useState('');
   const [expectedCount, setExpectedCount] = useState(0);
+  const [sourceWasJson, setSourceWasJson] = useState(false);
 
   const handlePickFile = async () => {
     setError('');
@@ -30,6 +31,7 @@ export function ImportFlow({ onComplete, onCancel }: Props) {
       }
       setFileName(result.fileName);
       setExtractedText(result.text);
+      setSourceWasJson(result.isJson);
       setBankName(result.fileName.replace(/\.[^.]+$/, ''));
 
       // JSON file — validate and go straight to preview
@@ -118,6 +120,17 @@ export function ImportFlow({ onComplete, onCancel }: Props) {
     } catch (e) {
       setError('Failed to save question bank. Please try again.');
       setStep('naming');
+    }
+  };
+
+  const handleDownloadGenerated = async () => {
+    setError('');
+    try {
+      const json = JSON.stringify({ questions: parsedQuestions }, null, 2);
+      await window.electronAPI.saveGeneratedJson(json, bankName || fileName);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to download JSON.';
+      setError(msg);
     }
   };
 
@@ -229,6 +242,9 @@ export function ImportFlow({ onComplete, onCancel }: Props) {
         {error && <div style={{ color: '#f44336', fontSize: 12, marginBottom: 10 }}>{error}</div>}
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn btn-primary" onClick={handleSave}>💾 Save to Library</button>
+          {!sourceWasJson && (
+            <button className="btn btn-secondary" onClick={handleDownloadGenerated}>⬇️ Download JSON</button>
+          )}
           <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
         </div>
       </div>
