@@ -154,4 +154,40 @@ Answer(s): A, C`;
     expect(result.questions[1].correct_answers).toEqual(['A', 'C']);
     expect(result.questions[1].type).toBe('multi_select');
   });
+
+  it('accepts "A)" option delimiters', () => {
+    const text = `Question 1 |
+Pick one.
+A) Foo
+B) Bar
+Correct Answer: B`;
+    const result = parseExamDump(text);
+    expect(result.questions[0].options).toEqual([
+      { id: 'A', text: 'Foo' },
+      { id: 'B', text: 'Bar' },
+    ]);
+    expect(result.questions[0].correct_answers).toEqual(['B']);
+  });
+
+  it('strips a trailing [Correct] marker and uses it when no answer line', () => {
+    const text = `Question 1 |
+Pick one.
+A. Foo
+B. Bar [Correct]
+C. Baz`;
+    const result = parseExamDump(text);
+    expect(result.questions[0].options[1]).toEqual({ id: 'B', text: 'Bar' });
+    expect(result.questions[0].correct_answers).toEqual(['B']);
+  });
+
+  it('prefers the answer line over inline markers when they disagree', () => {
+    const text = `Question 1 |
+Pick one.
+A. Foo [Correct]
+B. Bar
+Correct Answer: B`;
+    const result = parseExamDump(text);
+    expect(result.questions[0].correct_answers).toEqual(['B']);
+    expect(result.questions[0].options[0]).toEqual({ id: 'A', text: 'Foo' });
+  });
 });

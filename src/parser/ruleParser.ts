@@ -1,6 +1,8 @@
 import type { ParsedQuestion, ParseResult, QuestionOption, QuestionLink, QuestionType } from '../types';
 
-const OPTION_RE = /^([A-E])\.\s+(.+)/;
+const OPTION_RE = /^([A-E])[.)]\s+(.+)/;
+// Trailing inline correctness marker, e.g. "Bar [Correct]" or "Bar ✓"
+const CORRECT_MARKER_RE = /\s*(?:\[correct\]|✓)\s*$/i;
 // Accepts: "Answer: B", "Answer: A, B", "Correct Answer: D",
 // "Correct Answers: A, D", "Answer(s): A,D"
 const ANSWER_RE = /^(?:correct\s+)?answer(?:\(s\)|s)?:\s*([A-E](?:\s*,\s*[A-E])*)/i;
@@ -51,9 +53,15 @@ function parseBlock(block: string): ParsedQuestion | null {
 
   // Collect options
   const options: QuestionOption[] = [];
+  const inlineCorrect: string[] = [];
   while (idx < lines.length && OPTION_RE.test(lines[idx])) {
     const m = lines[idx++].match(OPTION_RE)!;
-    options.push({ id: m[1], text: m[2].trim() });
+    let text = m[2].trim();
+    if (CORRECT_MARKER_RE.test(text)) {
+      text = text.replace(CORRECT_MARKER_RE, '').trim();
+      inlineCorrect.push(m[1]);
+    }
+    options.push({ id: m[1], text });
   }
   if (options.length < 2) return null;
 
@@ -62,6 +70,12 @@ function parseBlock(block: string): ParsedQuestion | null {
   if (idx < lines.length && ANSWER_RE.test(lines[idx])) {
     const m = lines[idx++].match(ANSWER_RE)!;
     correctAnswers = m[1].split(',').map(a => a.trim());
+  }
+
+  // Dual-source: when no explicit answer line is present, fall back to the
+  // inline [Correct] markers collected from the options.
+  if (correctAnswers.length === 0 && inlineCorrect.length > 0) {
+    correctAnswers = inlineCorrect;
   }
 
   // Explanation (optional)
