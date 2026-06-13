@@ -8,7 +8,7 @@ function toResponse(r: ResponseRow): QuestionResponse {
 }
 
 export function saveResponse(input: SaveResponseInput): void {
-  getDb().prepare('INSERT INTO question_responses (attempt_id, question_id, selected_answers, is_correct, time_taken) VALUES (?,?,?,?,?)').run(input.attemptId, input.questionId, JSON.stringify(input.selectedAnswers), input.isCorrect ? 1 : 0, input.timeTaken);
+  getDb().prepare('INSERT INTO question_responses (attempt_id, question_id, selected_answers, is_correct, time_taken) VALUES (?,?,?,?,?) ON CONFLICT(attempt_id, question_id) DO UPDATE SET selected_answers=excluded.selected_answers, is_correct=excluded.is_correct, time_taken=excluded.time_taken').run(input.attemptId, input.questionId, JSON.stringify(input.selectedAnswers), input.isCorrect ? 1 : 0, input.timeTaken);
 }
 
 export function getResponsesForAttempt(attemptId: number): QuestionResponse[] {

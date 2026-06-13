@@ -1,4 +1,4 @@
-import { BrowserWindow, WebContentsView } from 'electron';
+import { BrowserWindow, WebContentsView, shell, type WebContents } from 'electron';
 import { DEFAULT_RATIO, clampRatio } from './ratio';
 import { AI_SERVICES, type AiService } from './services';
 
@@ -31,12 +31,36 @@ function ensureResizeListener(mainWindow: BrowserWindow): void {
   }
 }
 
+// These panels load untrusted external content (the AI services and arbitrary
+// reference URLs from a question). Harden each view: popups (target=_blank,
+// window.open) go to the OS browser instead of spawning an Electron window with
+// default privileges, and top-level navigation is restricted to http(s) so a
+// page can't redirect the view to file:// or another local scheme. In-page
+// http(s) navigation is left alone so the AI services work normally.
+function hardenWebContents(contents: WebContents): void {
+  contents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https:') || url.startsWith('http:')) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  contents.on('will-navigate', (event, url) => {
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      event.preventDefault();
+      return;
+    }
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') event.preventDefault();
+  });
+}
+
 function getOrCreateView(mainWindow: BrowserWindow, key: string, partition: string): PanelView {
   let entry = views.get(key);
   if (!entry) {
     const view = new WebContentsView({
       webPreferences: { partition, contextIsolation: true },
     });
+    hardenWebContents(view.webContents);
     mainWindow.contentView.addChildView(view);
     view.setVisible(false);
     entry = { view, loaded: false };

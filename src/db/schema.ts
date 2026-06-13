@@ -71,4 +71,19 @@ function runMigrations(db: Database.Database): void {
       last_session_date TEXT NOT NULL
     );
   `);
+
+  // Enforce one response per (attempt, question). SQLite can't add a constraint
+  // to an existing table, so we use a unique index — which also backs the
+  // ON CONFLICT upsert in saveResponse(). Drop any pre-existing duplicates
+  // (keeping the earliest row) first, otherwise index creation would fail on
+  // older databases written before this invariant existed.
+  db.exec(`
+    DELETE FROM question_responses
+    WHERE id NOT IN (
+      SELECT MIN(id) FROM question_responses GROUP BY attempt_id, question_id
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_responses_attempt_question
+      ON question_responses(attempt_id, question_id);
+  `);
 }

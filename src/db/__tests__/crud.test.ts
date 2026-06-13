@@ -3,7 +3,7 @@ import { initDb } from '../schema';
 import { createBank, getAllBanks, deleteBank, getBankStats } from '../banks';
 import { insertQuestions, getQuestionsForBank } from '../questions';
 import { createAttempt, completeAttempt, getAttemptsForBank, getActiveAttempt, deleteAttempt } from '../attempts';
-import { saveResponse, getResponsesForAttempt } from '../responses';
+import { saveResponse, updateResponse, getResponsesForAttempt } from '../responses';
 
 beforeEach(() => { initDb(':memory:'); });
 
@@ -66,6 +66,39 @@ describe('responses', () => {
     const responses = getResponsesForAttempt(attemptId);
     expect(responses[0].isCorrect).toBe(true);
     expect(responses[0].timeTaken).toBe(12);
+  });
+
+  it('saveResponse upserts — a second save for the same question overwrites, not duplicates', () => {
+    createBank('Test', 't.pdf');
+    const [bank] = getAllBanks();
+    insertQuestions(bank.id, [
+      { question: 'Q', type: 'multiple_choice', options: [{ id: 'A', text: 'x' }, { id: 'B', text: 'y' }], correct_answers: ['A'], explanation: null, links: null },
+    ]);
+    const [q] = getQuestionsForBank(bank.id);
+    const attemptId = createAttempt({ bankId: bank.id, timedMode: 'none', totalTimeLimit: null, perQuestionTimeLimit: null, showAnswerImmediately: false, totalQuestions: 1 });
+    saveResponse({ attemptId, questionId: q.id, selectedAnswers: ['B'], isCorrect: false, timeTaken: 5 });
+    saveResponse({ attemptId, questionId: q.id, selectedAnswers: ['A'], isCorrect: true, timeTaken: 9 });
+    const responses = getResponsesForAttempt(attemptId);
+    expect(responses).toHaveLength(1);
+    expect(responses[0].selectedAnswers).toEqual(['A']);
+    expect(responses[0].isCorrect).toBe(true);
+    expect(responses[0].timeTaken).toBe(9);
+  });
+
+  it('updateResponse changes an existing response in place', () => {
+    createBank('Test', 't.pdf');
+    const [bank] = getAllBanks();
+    insertQuestions(bank.id, [
+      { question: 'Q', type: 'multiple_choice', options: [{ id: 'A', text: 'x' }, { id: 'B', text: 'y' }], correct_answers: ['A'], explanation: null, links: null },
+    ]);
+    const [q] = getQuestionsForBank(bank.id);
+    const attemptId = createAttempt({ bankId: bank.id, timedMode: 'none', totalTimeLimit: null, perQuestionTimeLimit: null, showAnswerImmediately: false, totalQuestions: 1 });
+    saveResponse({ attemptId, questionId: q.id, selectedAnswers: ['B'], isCorrect: false, timeTaken: 5 });
+    updateResponse({ attemptId, questionId: q.id, selectedAnswers: ['A'], isCorrect: true, timeTaken: 7 });
+    const responses = getResponsesForAttempt(attemptId);
+    expect(responses).toHaveLength(1);
+    expect(responses[0].selectedAnswers).toEqual(['A']);
+    expect(responses[0].isCorrect).toBe(true);
   });
 });
 
