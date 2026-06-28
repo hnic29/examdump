@@ -39,7 +39,7 @@ function ensureResizeListener(mainWindow: BrowserWindow): void {
 // http(s) navigation is left alone so the AI services work normally.
 function hardenWebContents(contents: WebContents): void {
   contents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https:') || url.startsWith('http:')) shell.openExternal(url).catch(() => {});
+    if (url.startsWith('https:') || url.startsWith('http:')) shell.openExternal(url).catch((_e: unknown) => { /* best-effort */ });
     return { action: 'deny' };
   });
   const blockNonHttp = (event: Electron.Event, url: string) => {

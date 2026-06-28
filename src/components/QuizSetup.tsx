@@ -16,6 +16,7 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
   const [totalMinutes, setTotalMinutes] = useState('90');
   const [perQuestionSeconds, setPerQuestionSeconds] = useState('60');
   const [showAnswerImmediately, setShowAnswerImmediately] = useState(true);
+  const [scramble, setScramble] = useState(false);
 
   useEffect(() => {
     window.electronAPI.getWaterfallProgress(bankId).then(setWaterfallProgress);
@@ -34,7 +35,7 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
       ? { mode: 'waterfall', dailyCount: Math.max(1, parseInt(dailyCount, 10) || 10) }
       : { mode: 'normal' };
 
-    onStart({ timedMode, totalTimeLimit: totalLimit, perQuestionTimeLimit: perQLimit, showAnswerImmediately, quizMode });
+    onStart({ timedMode, totalTimeLimit: totalLimit, perQuestionTimeLimit: perQLimit, showAnswerImmediately, quizMode, scramble });
   };
 
   return (
@@ -161,6 +162,28 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
                   display: 'inline-block',
                 }} />
                 {val ? 'Yes — show answer and explanation immediately' : 'No — show all results at the end'}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="form-row">
+          <label className="form-label">Scramble question order?</label>
+          <div className="radio-group">
+            {([false, true] as const).map(val => (
+              <div
+                key={String(val)}
+                className={`radio-option${scramble === val ? ' selected' : ''}`}
+                onClick={() => setScramble(val)}
+              >
+                <span style={{
+                  width: 14, height: 14, borderRadius: '50%',
+                  border: `2px solid ${scramble === val ? '#2196f3' : '#4a5568'}`,
+                  background: scramble === val ? '#2196f3' : 'transparent',
+                  flexShrink: 0,
+                  display: 'inline-block',
+                }} />
+                {val ? 'Yes — randomize order each session' : 'No — original order'}
               </div>
             ))}
           </div>

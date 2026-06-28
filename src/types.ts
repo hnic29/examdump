@@ -113,6 +113,7 @@ export type QuizModeConfig =
 
 export type QuizStartConfig = Omit<CreateAttemptInput, 'bankId' | 'totalQuestions'> & {
   quizMode: QuizModeConfig;
+  scramble: boolean;
 };
 
 export interface ElectronAPI {

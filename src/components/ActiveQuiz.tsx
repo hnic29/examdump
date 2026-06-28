@@ -4,6 +4,15 @@ import { AnswerFeedback } from './AnswerFeedback';
 import { useTimer } from '../hooks/useTimer';
 import type { Question, QuizStartConfig, TimedMode, QuizAttempt } from '../types';
 
+function fisherYates<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 type QuizPhase = 'setup' | 'active' | 'feedback';
 
 interface QuizConfig {
@@ -212,6 +221,8 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
     } else {
       questions = allQuestions;
     }
+
+    if (cfg.scramble) questions = fisherYates(questions);
 
     const attemptId = await window.electronAPI.createAttempt({
       bankId,

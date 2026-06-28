@@ -197,7 +197,7 @@ function parseBlock(block: string): ParsedQuestion | null {
           if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
             links.push({ text: lines[idx].replace(url, '').trim() || url, url: parsed.toString() });
           }
-        } catch { }
+        } catch { /* skip malformed URL */ }
       }
     }
   }
