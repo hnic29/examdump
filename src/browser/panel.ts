@@ -39,10 +39,10 @@ function ensureResizeListener(mainWindow: BrowserWindow): void {
 // http(s) navigation is left alone so the AI services work normally.
 function hardenWebContents(contents: WebContents): void {
   contents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https:') || url.startsWith('http:')) shell.openExternal(url);
+    if (url.startsWith('https:') || url.startsWith('http:')) shell.openExternal(url).catch(() => {});
     return { action: 'deny' };
   });
-  contents.on('will-navigate', (event, url) => {
+  const blockNonHttp = (event: Electron.Event, url: string) => {
     let parsed: URL;
     try {
       parsed = new URL(url);
@@ -51,7 +51,11 @@ function hardenWebContents(contents: WebContents): void {
       return;
     }
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') event.preventDefault();
-  });
+  };
+  // Both events are needed: will-navigate for renderer-initiated navigations,
+  // will-redirect for server-side HTTP redirects (e.g. 301/302 to file://).
+  contents.on('will-navigate', blockNonHttp);
+  contents.on('will-redirect', blockNonHttp);
 }
 
 function getOrCreateView(mainWindow: BrowserWindow, key: string, partition: string): PanelView {

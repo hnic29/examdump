@@ -12,7 +12,9 @@ export function saveResponse(input: SaveResponseInput): void {
 }
 
 export function updateResponse(input: SaveResponseInput): void {
-  getDb().prepare('UPDATE question_responses SET selected_answers=?, is_correct=?, time_taken=? WHERE attempt_id=? AND question_id=?').run(JSON.stringify(input.selectedAnswers), input.isCorrect ? 1 : 0, input.timeTaken, input.attemptId, input.questionId);
+  // Delegate to the upsert so a missing row (DB/state divergence) is never a
+  // silent no-op that loses the revised answer.
+  saveResponse(input);
 }
 
 export function getResponsesForAttempt(attemptId: number): QuestionResponse[] {

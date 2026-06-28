@@ -224,4 +224,54 @@ A data scientist translates business use cases into ML solutions.`;
     expect(q.type).toBe('multiple_choice');
     expect(q.explanation).toContain('translates business use cases');
   });
+
+  it('parses headerless exam dump with no "Question N" lines (CompTIA-style)', () => {
+    const text = `What is the primary purpose of a firewall?
+A. Encrypt network traffic
+B. Filter incoming and outgoing network traffic
+C. Compress data for faster transmission
+D. Authenticate users before login
+Answer: B
+Explanation:
+A firewall monitors and controls network traffic based on predefined security rules.
+Authoritative Links for Further Research:
+NIST Firewall Guidelines: https://example.com/nist-firewall
+
+Which protocol operates at Layer 4 of the OSI model?
+A. HTTP
+B. IP
+C. TCP
+D. Ethernet
+Answer: C
+Explanation:
+TCP operates at Layer 4 and provides reliable, connection-oriented delivery.`;
+    const result = parseExamDump(text);
+    expect(result.success).toBe(true);
+    expect(result.questions).toHaveLength(2);
+    expect(result.questions[0].question).toContain('primary purpose of a firewall');
+    expect(result.questions[0].correct_answers).toEqual(['B']);
+    expect(result.questions[0].links).toHaveLength(1);
+    expect(result.questions[0].links![0].url).toBe('https://example.com/nist-firewall');
+    expect(result.questions[1].question).toContain('Layer 4 of the OSI model');
+    expect(result.questions[1].correct_answers).toEqual(['C']);
+  });
+
+  it('does not split on A./B. option-letter references inside explanation prose', () => {
+    const text = `Which technique prevents malicious input at runtime?
+A. Cross-validation
+B. Feature regularization
+C. Feature scaling
+D. Guardrails
+Answer: D
+Explanation:
+The other options are incorrect:
+A. Cross-validation is a training technique, not a runtime security measure.
+It does not prevent malicious input in production.
+B. Feature regularization reduces overfitting during training only.
+C. Feature scaling normalizes data ranges before training.`;
+    const result = parseExamDump(text);
+    expect(result.questions).toHaveLength(1);
+    expect(result.questions[0].correct_answers).toEqual(['D']);
+    expect(result.questions[0].explanation).toContain('Cross-validation is a training technique');
+  });
 });

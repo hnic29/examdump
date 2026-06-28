@@ -90,3 +90,6 @@ typings/
 
 # Electron-Forge
 out/
+
+# Claude Code local config (contains machine-specific permissions, never commit)
+.claude/settings.local.json

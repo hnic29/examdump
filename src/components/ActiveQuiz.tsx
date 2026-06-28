@@ -84,9 +84,9 @@ export function reducer(state: QuizState, action: QuizAction): QuizState {
       return { ...state, phase: 'active', currentIndex: nextIdx, selectedAnswers: existing ? existing.selectedAnswers : [], lastResponse: null, questionStartTime: Date.now() };
     }
     case 'BACK': {
-      const prevIdx = state.currentIndex - 1;
+      const prevIdx = Math.max(0, state.currentIndex - 1);
       const prev = state.responses[prevIdx];
-      return { ...state, currentIndex: prevIdx, selectedAnswers: prev ? prev.selectedAnswers : [], questionStartTime: Date.now() };
+      return { ...state, phase: 'active', currentIndex: prevIdx, selectedAnswers: prev ? prev.selectedAnswers : [], questionStartTime: Date.now() };
     }
     case 'TOGGLE_PAUSE':
       return { ...state, paused: !state.paused };
@@ -119,6 +119,7 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
   const [resumeAttempt, setResumeAttempt] = useState<QuizAttempt | null>(null);
   const [resumeAnswered, setResumeAnswered] = useState(0);
   const finishingRef = useRef(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -232,29 +233,34 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
   };
 
   const submitAnswer = async (question: Question, answers: string[]) => {
-    if (!state.attemptId) return;
+    if (!state.attemptId || submittingRef.current) return;
+    submittingRef.current = true;
     const elapsed = Math.floor((Date.now() - state.questionStartTime) / 1000);
     const isCorrect = arraysMatchSorted([...answers].sort(), [...question.correctAnswers].sort());
     const response: StoredResponse = { questionId: question.id, selectedAnswers: answers, isCorrect, timeTaken: elapsed };
     const isRevisit = state.currentIndex < state.responses.length;
 
-    if (isRevisit) {
-      await window.electronAPI.updateResponse({ attemptId: state.attemptId, questionId: question.id, selectedAnswers: answers, isCorrect, timeTaken: elapsed });
-      dispatch({ type: 'UPDATE_RESPONSE', index: state.currentIndex, response, showImmediately: state.config.showAnswerImmediately });
-      const updatedResponses = [...state.responses];
-      updatedResponses[state.currentIndex] = response;
-      const isLast = state.currentIndex >= state.questions.length - 1;
-      if (!state.config.showAnswerImmediately && isLast) {
-        finishQuiz(state.attemptId, updatedResponses, state.questions);
+    try {
+      if (isRevisit) {
+        await window.electronAPI.updateResponse({ attemptId: state.attemptId, questionId: question.id, selectedAnswers: answers, isCorrect, timeTaken: elapsed });
+        dispatch({ type: 'UPDATE_RESPONSE', index: state.currentIndex, response, showImmediately: state.config.showAnswerImmediately });
+        const updatedResponses = [...state.responses];
+        updatedResponses[state.currentIndex] = response;
+        const isLast = state.currentIndex >= state.questions.length - 1;
+        if (!state.config.showAnswerImmediately && isLast) {
+          finishQuiz(state.attemptId, updatedResponses, state.questions);
+        }
+      } else {
+        await window.electronAPI.saveResponse({ attemptId: state.attemptId, questionId: question.id, selectedAnswers: answers, isCorrect, timeTaken: elapsed });
+        dispatch({ type: 'SUBMIT', response, showImmediately: state.config.showAnswerImmediately });
+        const newResponses = [...state.responses, response];
+        const isLast = state.currentIndex >= state.questions.length - 1;
+        if (!state.config.showAnswerImmediately && isLast) {
+          finishQuiz(state.attemptId, newResponses, state.questions);
+        }
       }
-    } else {
-      await window.electronAPI.saveResponse({ attemptId: state.attemptId, questionId: question.id, selectedAnswers: answers, isCorrect, timeTaken: elapsed });
-      dispatch({ type: 'SUBMIT', response, showImmediately: state.config.showAnswerImmediately });
-      const newResponses = [...state.responses, response];
-      const isLast = state.currentIndex >= state.questions.length - 1;
-      if (!state.config.showAnswerImmediately && isLast) {
-        finishQuiz(state.attemptId, newResponses, state.questions);
-      }
+    } finally {
+      submittingRef.current = false;
     }
   };
 
