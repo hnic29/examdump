@@ -23,4 +23,5 @@ export const IPC = {
   ADVANCE_WATERFALL: 'advance-waterfall',
   GET_ACTIVE_ATTEMPT: 'get-active-attempt',
   DELETE_ATTEMPT: 'delete-attempt',
+  UPDATE_RESPONSE: 'update-response',
 } as const;

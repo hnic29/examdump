@@ -11,6 +11,7 @@ const api: ElectronAPI = {
   deleteBank: (bankId) => ipcRenderer.invoke(IPC.DELETE_BANK, bankId),
   createAttempt: (input: CreateAttemptInput) => ipcRenderer.invoke(IPC.CREATE_ATTEMPT, input),
   saveResponse: (input: SaveResponseInput) => ipcRenderer.invoke(IPC.SAVE_RESPONSE, input),
+  updateResponse: (input: SaveResponseInput) => ipcRenderer.invoke(IPC.UPDATE_RESPONSE, input),
   completeAttempt: (input: CompleteAttemptInput) => ipcRenderer.invoke(IPC.COMPLETE_ATTEMPT, input),
   getHistory: (bankId) => ipcRenderer.invoke(IPC.GET_HISTORY, bankId),
   getResponses: (attemptId) => ipcRenderer.invoke(IPC.GET_RESPONSES, attemptId),

@@ -38,7 +38,9 @@ type QuizAction =
   | { type: 'RESUME'; questions: Question[]; attemptId: number; config: QuizConfig; responses: StoredResponse[]; currentIndex: number }
   | { type: 'SELECT'; answers: string[] }
   | { type: 'SUBMIT'; response: StoredResponse; showImmediately: boolean }
+  | { type: 'UPDATE_RESPONSE'; index: number; response: StoredResponse; showImmediately: boolean }
   | { type: 'NEXT' }
+  | { type: 'BACK' }
   | { type: 'TOGGLE_PAUSE' };
 
 export function reducer(state: QuizState, action: QuizAction): QuizState {
@@ -62,8 +64,30 @@ export function reducer(state: QuizState, action: QuizAction): QuizState {
         questionStartTime: Date.now(),
       };
     }
-    case 'NEXT':
-      return { ...state, phase: 'active', currentIndex: state.currentIndex + 1, selectedAnswers: [], lastResponse: null, questionStartTime: Date.now() };
+    case 'UPDATE_RESPONSE': {
+      const updated = [...state.responses];
+      updated[action.index] = action.response;
+      const nextIdx = action.showImmediately ? state.currentIndex : state.currentIndex + 1;
+      return {
+        ...state,
+        phase: action.showImmediately ? 'feedback' : 'active',
+        currentIndex: nextIdx,
+        selectedAnswers: !action.showImmediately && updated[nextIdx] ? updated[nextIdx].selectedAnswers : [],
+        responses: updated,
+        lastResponse: action.response,
+        questionStartTime: Date.now(),
+      };
+    }
+    case 'NEXT': {
+      const nextIdx = state.currentIndex + 1;
+      const existing = state.responses[nextIdx];
+      return { ...state, phase: 'active', currentIndex: nextIdx, selectedAnswers: existing ? existing.selectedAnswers : [], lastResponse: null, questionStartTime: Date.now() };
+    }
+    case 'BACK': {
+      const prevIdx = state.currentIndex - 1;
+      const prev = state.responses[prevIdx];
+      return { ...state, currentIndex: prevIdx, selectedAnswers: prev ? prev.selectedAnswers : [], questionStartTime: Date.now() };
+    }
     case 'TOGGLE_PAUSE':
       return { ...state, paused: !state.paused };
     default:
@@ -212,19 +236,32 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
     const elapsed = Math.floor((Date.now() - state.questionStartTime) / 1000);
     const isCorrect = arraysMatchSorted([...answers].sort(), [...question.correctAnswers].sort());
     const response: StoredResponse = { questionId: question.id, selectedAnswers: answers, isCorrect, timeTaken: elapsed };
-    await window.electronAPI.saveResponse({ attemptId: state.attemptId, questionId: question.id, selectedAnswers: answers, isCorrect, timeTaken: elapsed });
-    dispatch({ type: 'SUBMIT', response, showImmediately: state.config.showAnswerImmediately });
+    const isRevisit = state.currentIndex < state.responses.length;
 
-    const newResponses = [...state.responses, response];
-    const isLast = state.currentIndex >= state.questions.length - 1;
-    if (!state.config.showAnswerImmediately && isLast) {
-      finishQuiz(state.attemptId, newResponses, state.questions);
+    if (isRevisit) {
+      await window.electronAPI.updateResponse({ attemptId: state.attemptId, questionId: question.id, selectedAnswers: answers, isCorrect, timeTaken: elapsed });
+      dispatch({ type: 'UPDATE_RESPONSE', index: state.currentIndex, response, showImmediately: state.config.showAnswerImmediately });
+      const updatedResponses = [...state.responses];
+      updatedResponses[state.currentIndex] = response;
+      const isLast = state.currentIndex >= state.questions.length - 1;
+      if (!state.config.showAnswerImmediately && isLast) {
+        finishQuiz(state.attemptId, updatedResponses, state.questions);
+      }
+    } else {
+      await window.electronAPI.saveResponse({ attemptId: state.attemptId, questionId: question.id, selectedAnswers: answers, isCorrect, timeTaken: elapsed });
+      dispatch({ type: 'SUBMIT', response, showImmediately: state.config.showAnswerImmediately });
+      const newResponses = [...state.responses, response];
+      const isLast = state.currentIndex >= state.questions.length - 1;
+      if (!state.config.showAnswerImmediately && isLast) {
+        finishQuiz(state.attemptId, newResponses, state.questions);
+      }
     }
   };
 
   const handleNext = () => {
     const isLast = state.currentIndex >= state.questions.length - 1;
-    if (isLast) finishQuiz(state.attemptId!, state.responses, state.questions);
+    const allAnswered = state.responses.length >= state.questions.length;
+    if (isLast && allAnswered) finishQuiz(state.attemptId!, state.responses, state.questions);
     else dispatch({ type: 'NEXT' });
   };
 
@@ -284,6 +321,7 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
   if (isComplete) return <div style={{ color: '#8b9cb0' }}>Finishing…</div>;
 
   const question = state.questions[state.currentIndex];
+  const isRevisit = state.currentIndex < state.responses.length;
   const totalSecs = state.config.totalTimeLimit;
   const perQSecs = state.config.perQuestionTimeLimit;
 
@@ -372,10 +410,20 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
               </div>
             );
           })}
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
+            {state.currentIndex > 0 && (
+              <button className="btn btn-secondary" onClick={() => dispatch({ type: 'BACK' })}>
+                ← Back
+              </button>
+            )}
             <button className="btn btn-primary" disabled={state.selectedAnswers.length === 0} onClick={() => submitAnswer(question, state.selectedAnswers)}>
-              Submit →
+              {isRevisit ? 'Update →' : 'Submit →'}
             </button>
+            {isRevisit && (
+              <button className="btn btn-secondary" onClick={handleNext}>
+                Skip →
+              </button>
+            )}
           </div>
         </>
       )}

@@ -6,7 +6,7 @@ import { initDb } from './db/schema';
 import { getAllBanks, createBank, deleteBank, getBankStats } from './db/banks';
 import { insertQuestions, getQuestionsForBank } from './db/questions';
 import { createAttempt, completeAttempt, getAttemptsForBank, getActiveAttempt, deleteAttempt } from './db/attempts';
-import { saveResponse, getResponsesForAttempt } from './db/responses';
+import { saveResponse, updateResponse, getResponsesForAttempt } from './db/responses';
 import { getWaterfallProgress, advanceWaterfall } from './db/waterfall';
 import { extractText } from './parser/fileExtractor';
 import { parseExamDump } from './parser/ruleParser';
@@ -117,6 +117,12 @@ function registerIpcHandlers() {
     requirePosInt(input.attemptId, 'attemptId');
     requirePosInt(input.questionId, 'questionId');
     return saveResponse(input);
+  });
+
+  ipcMain.handle(IPC.UPDATE_RESPONSE, (_e, input: SaveResponseInput) => {
+    requirePosInt(input.attemptId, 'attemptId');
+    requirePosInt(input.questionId, 'questionId');
+    return updateResponse(input);
   });
 
   ipcMain.handle(IPC.COMPLETE_ATTEMPT, (_e, input: CompleteAttemptInput) => {

@@ -124,6 +124,7 @@ export interface ElectronAPI {
   deleteBank: (bankId: number) => Promise<void>;
   createAttempt: (input: CreateAttemptInput) => Promise<number>;
   saveResponse: (input: SaveResponseInput) => Promise<void>;
+  updateResponse: (input: SaveResponseInput) => Promise<void>;
   completeAttempt: (input: CompleteAttemptInput) => Promise<void>;
   getHistory: (bankId: number) => Promise<QuizAttempt[]>;
   getResponses: (attemptId: number) => Promise<QuestionResponse[]>;

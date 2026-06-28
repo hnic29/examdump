@@ -11,6 +11,10 @@ export function saveResponse(input: SaveResponseInput): void {
   getDb().prepare('INSERT INTO question_responses (attempt_id, question_id, selected_answers, is_correct, time_taken) VALUES (?,?,?,?,?) ON CONFLICT(attempt_id, question_id) DO UPDATE SET selected_answers=excluded.selected_answers, is_correct=excluded.is_correct, time_taken=excluded.time_taken').run(input.attemptId, input.questionId, JSON.stringify(input.selectedAnswers), input.isCorrect ? 1 : 0, input.timeTaken);
 }
 
+export function updateResponse(input: SaveResponseInput): void {
+  getDb().prepare('UPDATE question_responses SET selected_answers=?, is_correct=?, time_taken=? WHERE attempt_id=? AND question_id=?').run(JSON.stringify(input.selectedAnswers), input.isCorrect ? 1 : 0, input.timeTaken, input.attemptId, input.questionId);
+}
+
 export function getResponsesForAttempt(attemptId: number): QuestionResponse[] {
   return (getDb().prepare('SELECT * FROM question_responses WHERE attempt_id = ? ORDER BY id').all(attemptId) as ResponseRow[]).map(toResponse);
 }
