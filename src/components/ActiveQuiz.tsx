@@ -20,6 +20,7 @@ interface QuizConfig {
   totalTimeLimit: number | null;
   perQuestionTimeLimit: number | null;
   showAnswerImmediately: boolean;
+  isPractice: boolean;
 }
 
 interface StoredResponse {
@@ -118,7 +119,7 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
     selectedAnswers: [],
     paused: false,
     attemptId: null,
-    config: { timedMode: 'none', totalTimeLimit: null, perQuestionTimeLimit: null, showAnswerImmediately: true },
+    config: { timedMode: 'none', totalTimeLimit: null, perQuestionTimeLimit: null, showAnswerImmediately: true, isPractice: false },
     responses: [],
     lastResponse: null,
     questionStartTime: Date.now(),
@@ -127,6 +128,7 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
   const [checkingResume, setCheckingResume] = useState(true);
   const [resumeAttempt, setResumeAttempt] = useState<QuizAttempt | null>(null);
   const [resumeAnswered, setResumeAnswered] = useState(0);
+  const [showExplanation, setShowExplanation] = useState(false);
   const finishingRef = useRef(false);
   const submittingRef = useRef(false);
 
@@ -193,6 +195,7 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
       totalTimeLimit: resumeAttempt.totalTimeLimit,
       perQuestionTimeLimit: resumeAttempt.perQuestionTimeLimit,
       showAnswerImmediately: resumeAttempt.showAnswerImmediately,
+      isPractice: false,
     };
     if (complete) {
       finishQuiz(resumeAttempt.id, responses, questions);
@@ -241,6 +244,7 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
       totalTimeLimit: cfg.totalTimeLimit,
       perQuestionTimeLimit: cfg.perQuestionTimeLimit,
       showAnswerImmediately: cfg.showAnswerImmediately,
+      isPractice: cfg.quizMode.mode === 'practice',
     }});
 
     if (cfg.totalTimeLimit) { totalTimer.reset(cfg.totalTimeLimit); totalTimer.start(); }
@@ -250,26 +254,29 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
     if (!state.attemptId || submittingRef.current) return;
     submittingRef.current = true;
     const elapsed = Math.floor((Date.now() - state.questionStartTime) / 1000);
-    const isCorrect = arraysMatchSorted([...answers].sort(), [...question.correctAnswers].sort());
+    const isInteractive = question.questionType === 'interactive';
+    // Interactive questions are never graded and never show the answer feedback screen.
+    const isCorrect = isInteractive ? false : arraysMatchSorted([...answers].sort(), [...question.correctAnswers].sort());
+    const showImmediately = !isInteractive && state.config.showAnswerImmediately && !state.config.isPractice;
     const response: StoredResponse = { questionId: question.id, selectedAnswers: answers, isCorrect, timeTaken: elapsed };
     const isRevisit = state.currentIndex < state.responses.length;
 
     try {
       if (isRevisit) {
         await window.electronAPI.updateResponse({ attemptId: state.attemptId, questionId: question.id, selectedAnswers: answers, isCorrect, timeTaken: elapsed });
-        dispatch({ type: 'UPDATE_RESPONSE', index: state.currentIndex, response, showImmediately: state.config.showAnswerImmediately });
+        dispatch({ type: 'UPDATE_RESPONSE', index: state.currentIndex, response, showImmediately });
         const updatedResponses = [...state.responses];
         updatedResponses[state.currentIndex] = response;
         const isLast = state.currentIndex >= state.questions.length - 1;
-        if (!state.config.showAnswerImmediately && isLast) {
+        if (!showImmediately && isLast) {
           finishQuiz(state.attemptId, updatedResponses, state.questions);
         }
       } else {
         await window.electronAPI.saveResponse({ attemptId: state.attemptId, questionId: question.id, selectedAnswers: answers, isCorrect, timeTaken: elapsed });
-        dispatch({ type: 'SUBMIT', response, showImmediately: state.config.showAnswerImmediately });
+        dispatch({ type: 'SUBMIT', response, showImmediately });
         const newResponses = [...state.responses, response];
         const isLast = state.currentIndex >= state.questions.length - 1;
-        if (!state.config.showAnswerImmediately && isLast) {
+        if (!showImmediately && isLast) {
           finishQuiz(state.attemptId, newResponses, state.questions);
         }
       }
@@ -279,6 +286,7 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
   };
 
   const handleNext = () => {
+    setShowExplanation(false);
     const isLast = state.currentIndex >= state.questions.length - 1;
     const allAnswered = state.responses.length >= state.questions.length;
     if (isLast && allAnswered) finishQuiz(state.attemptId!, state.responses, state.questions);
@@ -288,8 +296,13 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
   const finishQuiz = async (attemptId: number, responses: StoredResponse[], questions: Question[]) => {
     if (finishingRef.current) return;
     finishingRef.current = true;
-    const correctCount = responses.filter(r => r.isCorrect).length;
-    const score = questions.length > 0 ? (correctCount / questions.length) * 100 : 0;
+    // Interactive questions are excluded from scoring.
+    const scorable = questions.filter(q => q.questionType !== 'interactive');
+    const correctCount = responses.filter(r => {
+      const q = questions.find(q2 => q2.id === r.questionId);
+      return q && q.questionType !== 'interactive' && r.isCorrect;
+    }).length;
+    const score = scorable.length > 0 ? (correctCount / scorable.length) * 100 : 0;
     await window.electronAPI.completeAttempt({ attemptId, correctCount, score });
     onComplete(attemptId);
   };
@@ -410,6 +423,77 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
           onNext={handleNext}
           onOpenLink={openLink}
         />
+      ) : question.questionType === 'interactive' ? (
+        <>
+          <div style={{ marginBottom: 12 }}>
+            <span className="badge badge-interactive">Interactive · Unscored</span>
+          </div>
+          <p style={{ fontSize: 19, lineHeight: 1.6, marginBottom: 18 }}>{question.questionText}</p>
+          {question.imageData && (
+            <img
+              src={question.imageData}
+              alt="Interactive question scenario"
+              style={{ maxWidth: '100%', borderRadius: 6, border: '1px solid #2d3a52', marginBottom: 18 }}
+            />
+          )}
+          <div style={{ marginTop: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
+            {state.currentIndex > 0 && (
+              <button className="btn btn-secondary" onClick={() => dispatch({ type: 'BACK' })}>← Back</button>
+            )}
+            <button className="btn btn-primary" onClick={() => submitAnswer(question, [])}>Continue →</button>
+          </div>
+        </>
+      ) : state.config.isPractice ? (
+        <>
+          <div style={{ marginBottom: 12 }}>
+            <span className={`badge ${question.questionType === 'true_false' ? 'badge-tf' : question.questionType === 'multi_select' ? 'badge-ms' : 'badge-mc'}`}>
+              {question.questionType === 'multiple_choice' ? 'Multiple Choice' : question.questionType === 'true_false' ? 'True / False' : 'Select All That Apply'}
+            </span>
+          </div>
+          <p style={{ fontSize: 19, lineHeight: 1.6, marginBottom: 18 }}>{question.questionText}</p>
+          {question.options.map(opt => {
+            const isCorrect = question.correctAnswers.includes(opt.id);
+            return (
+              <div key={opt.id} style={{ display: 'flex', gap: 12, padding: '13px 15px', borderRadius: 6, border: `1px solid ${isCorrect ? '#4caf50' : '#2d3a52'}`, background: isCorrect ? '#4caf5018' : '#1a1f2e', marginBottom: 8 }}>
+                <div style={{ width: 27, height: 27, borderRadius: 4, background: isCorrect ? '#4caf50' : '#2d3a52', color: '#fff', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{opt.id}</div>
+                <div style={{ fontSize: 16, lineHeight: 1.5, paddingTop: 3, color: isCorrect ? '#c9d4e8' : '#8b9cb0' }}>{opt.text}</div>
+              </div>
+            );
+          })}
+          {question.explanation && (
+            <div style={{ marginTop: 14, marginBottom: 12 }}>
+              <button
+                className="btn btn-secondary"
+                style={{ fontSize: 12, padding: '4px 12px' }}
+                onClick={() => setShowExplanation(e => !e)}
+              >
+                {showExplanation ? 'Hide Explanation' : 'Explanation'}
+              </button>
+              {showExplanation && (
+                <div style={{ borderLeft: '3px solid #4caf50', background: '#1e2535', borderRadius: '0 6px 6px 0', padding: '10px 14px', marginTop: 8, maxHeight: 180, overflowY: 'auto' }}>
+                  <div style={{ fontSize: 15, color: '#c9d4e8', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{question.explanation}</div>
+                </div>
+              )}
+            </div>
+          )}
+          {question.links && question.links.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              {question.links.map((link, i) => (
+                <button key={i} className="btn btn-secondary" style={{ marginRight: 6, marginBottom: 4, fontSize: 11 }} onClick={() => openLink(link.url)}>
+                  🔗 {link.text.slice(0, 50)}
+                </button>
+              ))}
+            </div>
+          )}
+          <div style={{ marginTop: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
+            {state.currentIndex > 0 && (
+              <button className="btn btn-secondary" onClick={() => { setShowExplanation(false); dispatch({ type: 'BACK' }); }}>← Back</button>
+            )}
+            <button className="btn btn-primary" onClick={() => { setShowExplanation(false); submitAnswer(question, question.correctAnswers); }}>
+              {state.currentIndex >= state.questions.length - 1 ? 'Finish' : 'Next →'}
+            </button>
+          </div>
+        </>
       ) : (
         <>
           <div style={{ marginBottom: 12 }}>
