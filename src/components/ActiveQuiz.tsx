@@ -218,6 +218,9 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
         allQuestions.length
       );
       questions = allQuestions.slice(0, progress.introducedCount);
+    } else if (cfg.quizMode.mode === 'practice') {
+      const ids = new Set(cfg.quizMode.questionIds);
+      questions = allQuestions.filter(q => ids.has(q.id));
     } else {
       questions = allQuestions;
     }

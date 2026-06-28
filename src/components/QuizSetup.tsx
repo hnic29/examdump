@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { TimedMode, QuizStartConfig, WaterfallProgress } from '../types';
+import type { TimedMode, QuizStartConfig, WaterfallProgress, Question } from '../types';
 
 interface Props {
   bankId: number;
@@ -9,7 +9,7 @@ interface Props {
 }
 
 export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
-  const [callMode, setCallMode] = useState<'normal' | 'waterfall'>('normal');
+  const [callMode, setCallMode] = useState<'normal' | 'waterfall' | 'practice'>('normal');
   const [dailyCount, setDailyCount] = useState('10');
   const [waterfallProgress, setWaterfallProgress] = useState<WaterfallProgress | null>(null);
   const [timedMode, setTimedMode] = useState<TimedMode>('none');
@@ -18,9 +18,32 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
   const [showAnswerImmediately, setShowAnswerImmediately] = useState(true);
   const [scramble, setScramble] = useState(false);
 
+  // Practice mode state
+  const [practiceQuestions, setPracticeQuestions] = useState<Question[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [practiceLoading, setPracticeLoading] = useState(false);
+
   useEffect(() => {
     window.electronAPI.getWaterfallProgress(bankId).then(setWaterfallProgress);
   }, [bankId]);
+
+  useEffect(() => {
+    if (callMode !== 'practice') return;
+    setPracticeLoading(true);
+    window.electronAPI.loadQuestions(bankId).then(qs => {
+      setPracticeQuestions(qs);
+      setSelectedIds(new Set(qs.map(q => q.id)));
+      setPracticeLoading(false);
+    });
+  }, [callMode, bankId]);
+
+  const toggleQuestion = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const handleStart = () => {
     const totalLimit = (timedMode === 'total' || timedMode === 'both')
@@ -30,10 +53,14 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
 
     if (totalLimit !== null && !Number.isFinite(totalLimit)) return;
     if (perQLimit !== null && !Number.isFinite(perQLimit)) return;
+    if (callMode === 'practice' && selectedIds.size === 0) return;
 
-    const quizMode: QuizStartConfig['quizMode'] = callMode === 'waterfall'
-      ? { mode: 'waterfall', dailyCount: Math.max(1, parseInt(dailyCount, 10) || 10) }
-      : { mode: 'normal' };
+    const quizMode: QuizStartConfig['quizMode'] =
+      callMode === 'waterfall'
+        ? { mode: 'waterfall', dailyCount: Math.max(1, parseInt(dailyCount, 10) || 10) }
+        : callMode === 'practice'
+        ? { mode: 'practice', questionIds: [...selectedIds] }
+        : { mode: 'normal' };
 
     onStart({ timedMode, totalTimeLimit: totalLimit, perQuestionTimeLimit: perQLimit, showAnswerImmediately, quizMode, scramble });
   };
@@ -47,7 +74,11 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
         <div className="form-row">
           <label className="form-label">Call Mode</label>
           <div className="radio-group">
-            {(['normal', 'waterfall'] as const).map(val => (
+            {([
+              ['normal', 'Normal'],
+              ['waterfall', 'Waterfall'],
+              ['practice', 'Practice'],
+            ] as ['normal' | 'waterfall' | 'practice', string][]).map(([val, label]) => (
               <div
                 key={val}
                 className={`radio-option${callMode === val ? ' selected' : ''}`}
@@ -60,7 +91,7 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
                   flexShrink: 0,
                   display: 'inline-block',
                 }} />
-                {val === 'normal' ? 'Normal' : 'Waterfall'}
+                {label}
               </div>
             ))}
           </div>
@@ -85,6 +116,87 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
             {waterfallProgress && waterfallProgress.introducedCount >= questionCount && (
               <p style={{ color: '#8b9cb0', fontSize: 11, marginTop: 6 }}>
                 All questions introduced — daily full review
+              </p>
+            )}
+          </div>
+        )}
+
+        {callMode === 'practice' && (
+          <div className="form-row">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <label className="form-label" style={{ margin: 0 }}>
+                {practiceLoading
+                  ? 'Loading questions…'
+                  : `${selectedIds.size} of ${practiceQuestions.length} selected`}
+              </label>
+              {!practiceLoading && practiceQuestions.length > 0 && (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ padding: '2px 10px', fontSize: 11 }}
+                    onClick={() => setSelectedIds(new Set(practiceQuestions.map(q => q.id)))}
+                  >
+                    All
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ padding: '2px 10px', fontSize: 11 }}
+                    onClick={() => setSelectedIds(new Set())}
+                  >
+                    None
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {!practiceLoading && (
+              <div style={{
+                maxHeight: 220,
+                overflowY: 'auto',
+                border: '1px solid #2d3748',
+                borderRadius: 4,
+              }}>
+                {practiceQuestions.map((q, i) => {
+                  const checked = selectedIds.has(q.id);
+                  return (
+                    <div
+                      key={q.id}
+                      onClick={() => toggleQuestion(q.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 10,
+                        padding: '7px 10px',
+                        cursor: 'pointer',
+                        borderBottom: i < practiceQuestions.length - 1 ? '1px solid #1e2a3a' : 'none',
+                        background: checked ? '#1a2a3e' : 'transparent',
+                        userSelect: 'none',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleQuestion(q.id)}
+                        onClick={e => e.stopPropagation()}
+                        style={{ marginTop: 2, flexShrink: 0 }}
+                      />
+                      <span style={{ color: '#5a7a9a', fontSize: 11, minWidth: 30, flexShrink: 0 }}>
+                        Q{q.orderIndex + 1}
+                      </span>
+                      <span style={{ fontSize: 12, lineHeight: '1.4', color: checked ? '#e2e8f0' : '#8b9cb0' }}>
+                        {q.questionText.length > 120
+                          ? q.questionText.slice(0, 120) + '…'
+                          : q.questionText}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!practiceLoading && selectedIds.size === 0 && (
+              <p style={{ color: '#e57373', fontSize: 11, marginTop: 6 }}>
+                Select at least one question to start.
               </p>
             )}
           </div>
@@ -190,7 +302,13 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-          <button className="btn btn-primary" onClick={handleStart}>&#x25B6; Start Quiz</button>
+          <button
+            className="btn btn-primary"
+            onClick={handleStart}
+            disabled={callMode === 'practice' && selectedIds.size === 0}
+          >
+            &#x25B6; Start Quiz
+          </button>
           <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
         </div>
       </div>

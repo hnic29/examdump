@@ -109,7 +109,8 @@ export interface WaterfallProgress {
 
 export type QuizModeConfig =
   | { mode: 'normal' }
-  | { mode: 'waterfall'; dailyCount: number };
+  | { mode: 'waterfall'; dailyCount: number }
+  | { mode: 'practice'; questionIds: number[] };
 
 export type QuizStartConfig = Omit<CreateAttemptInput, 'bankId' | 'totalQuestions'> & {
   quizMode: QuizModeConfig;
