@@ -11,10 +11,13 @@ const FALSE_RE = /^false\.?$/i;
 const MULTI_SELECT_RE = /select\s+(all|two|three|\d+)|choose\s+(all|two|three|\d+)/i;
 const QUESTION_HEADER_RE = /^(?:question|q)\s*:?\s*\d+/i;
 
-// True when lines[idx] is "A. [text]" immediately followed by "B. [text]".
-// This distinguishes a real option set from "A. ..." references inside explanation
-// prose, which are separated from "B. ..." by continuation lines rather than
-// an immediate next line.
+// Matches interactive question type markers.
+// [\s.:~-]* handles variants like "HOTSPOT -" (trailing dash) or "HOTSPOT:"
+const INTERACTIVE_MARKER_RE = /^(drag\s+and\s+drop|drag\s+drop|hotspot|hot\s+spot|simulation|simlet|interactive|build\s+list|reorder|mark\s+review)[\s.:~-]*$/i;
+
+// [[IMG:N]] placeholder injected by extractFileContent for DOCX images
+const IMG_PLACEHOLDER_RE = /^\[\[IMG:(\d+)\]\]$/;
+
 function isOptionSetStart(lines: string[], idx: number): boolean {
   const m = lines[idx]?.match(OPTION_RE);
   if (!m || m[1] !== 'A') return false;
@@ -22,29 +25,59 @@ function isOptionSetStart(lines: string[], idx: number): boolean {
   return mNext !== null && mNext[1] === 'B';
 }
 
-// Primary parser: detects question boundaries via option sets (A. immediately
-// followed by B.) rather than "Question N" headers. This handles both headed
-// formats and headerless CompTIA-style dumps where questions begin with raw
-// question text and no explicit question number.
-export function parseExamDump(text: string): ParseResult {
+export function parseExamDump(text: string, images: string[] = []): ParseResult {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const questions: ParsedQuestion[] = [];
   let optionSetsFound = 0;
   let idx = 0;
 
   while (idx < lines.length) {
-    // Collect question-text lines until the next real option-set boundary
-    const qTextLines: string[] = [];
-    while (idx < lines.length && !isOptionSetStart(lines, idx)) {
-      if (!QUESTION_HEADER_RE.test(lines[idx])) qTextLines.push(lines[idx]);
+    const preBoundaryLines: string[] = [];
+    while (
+      idx < lines.length &&
+      !isOptionSetStart(lines, idx) &&
+      !INTERACTIVE_MARKER_RE.test(lines[idx])
+    ) {
+      if (!QUESTION_HEADER_RE.test(lines[idx])) preBoundaryLines.push(lines[idx]);
       idx++;
     }
+
     if (idx >= lines.length) break;
 
-    optionSetsFound++;
-    const questionText = qTextLines.join(' ').trim();
+    // — Interactive branch —
+    if (INTERACTIVE_MARKER_RE.test(lines[idx])) {
+      idx++; // consume the marker line
+      const interactiveLines: string[] = [];
+      while (
+        idx < lines.length &&
+        !isOptionSetStart(lines, idx) &&
+        !QUESTION_HEADER_RE.test(lines[idx])
+      ) {
+        if (!INTERACTIVE_MARKER_RE.test(lines[idx])) interactiveLines.push(lines[idx]);
+        idx++;
+      }
+      const { questionText, imageData } = extractInteractiveContent(
+        [...preBoundaryLines, ...interactiveLines],
+        images
+      );
+      if (questionText) {
+        questions.push({
+          question: questionText,
+          type: 'interactive',
+          options: [],
+          correct_answers: [],
+          explanation: null,
+          links: null,
+          imageData,
+        });
+      }
+      continue;
+    }
 
-    // Options
+    // — Regular option-set branch —
+    optionSetsFound++;
+    const questionText = preBoundaryLines.join(' ').trim();
+
     const options: QuestionOption[] = [];
     const inlineCorrect: string[] = [];
     while (idx < lines.length && OPTION_RE.test(lines[idx])) {
@@ -59,7 +92,6 @@ export function parseExamDump(text: string): ParseResult {
 
     if (options.length < 2 || !questionText) continue;
 
-    // Answer line
     let correctAnswers: string[] = [];
     if (idx < lines.length && ANSWER_RE.test(lines[idx])) {
       const m = lines[idx++].match(ANSWER_RE)!;
@@ -67,7 +99,6 @@ export function parseExamDump(text: string): ParseResult {
     }
     if (correctAnswers.length === 0 && inlineCorrect.length > 0) correctAnswers = inlineCorrect;
 
-    // Explanation — stop at Authoritative Links header or the next option set
     let explanation: string | null = null;
     const links: QuestionLink[] = [];
 
@@ -80,8 +111,6 @@ export function parseExamDump(text: string): ParseResult {
       explanation = explLines.join('\n').trim() || null;
     }
 
-    // Links — stop at first non-URL line so the next question's text is not
-    // consumed by this section (the next question starts right after the last URL).
     if (idx < lines.length && LINKS_HEADER_RE.test(lines[idx])) {
       idx++;
       while (idx < lines.length && !isOptionSetStart(lines, idx)) {
@@ -98,7 +127,6 @@ export function parseExamDump(text: string): ParseResult {
       }
     }
 
-    // Question type
     let type: QuestionType = 'multiple_choice';
     if (options.length === 2 && TRUE_RE.test(options[0].text) && FALSE_RE.test(options[1].text)) {
       type = 'true_false';
@@ -109,22 +137,40 @@ export function parseExamDump(text: string): ParseResult {
     questions.push({ question: questionText, type, options, correct_answers: correctAnswers, explanation, links: links.length > 0 ? links : null });
   }
 
-  // Fall back to header-based splitting for formats without labeled options
-  // (e.g. a pure Q&A text with no A./B./C./D. lines at all).
-  if (optionSetsFound === 0) return parseByHeaders(text);
+  if (optionSetsFound === 0 && questions.length === 0) return parseByHeaders(text);
 
-  // Use the max of option-sets found and explicit "Question N" header count so
-  // that a partial parse (header present but options stripped by bad PDF extraction)
-  // still registers the full intended question count in expectedCount.
   const headerCount = (text.match(/^\s*(?:question\s*:?\s*\d+|q\s*:?\s*\d+(?![^\S\n]*[a-zA-Z]))/gim) ?? []).length;
-  const expectedCount = Math.max(optionSetsFound, headerCount);
-  const confidence = questions.length / optionSetsFound;
+  const interactiveCount = questions.filter(q => q.type === 'interactive').length;
+  const expectedCount = Math.max(optionSetsFound + interactiveCount, headerCount);
+  const scorableCount = questions.filter(q => q.type !== 'interactive').length;
+  const confidence = optionSetsFound > 0 ? scorableCount / optionSetsFound : (questions.length > 0 ? 1 : 0);
 
   return { success: confidence >= 0.5, questions, confidence, expectedCount };
 }
 
-// Fallback: split on "Question N" / "Q N" headers and parse each block.
-// Used when the primary option-set scanner finds nothing.
+function extractInteractiveContent(rawLines: string[], images: string[]): { questionText: string; imageData: string | null } {
+  let imageData: string | null = null;
+  let done = false;
+  const textLines: string[] = [];
+
+  for (const l of rawLines) {
+    if (done) continue;
+    if (/^Answer:/i.test(l) || EXPLANATION_RE.test(l) || LINKS_HEADER_RE.test(l)) {
+      done = true;
+      continue;
+    }
+    const m = l.match(IMG_PLACEHOLDER_RE);
+    if (m) {
+      const imgIdx = parseInt(m[1]);
+      if (!imageData && images[imgIdx]) imageData = images[imgIdx];
+      continue;
+    }
+    textLines.push(l);
+  }
+
+  return { questionText: textLines.join(' ').trim(), imageData };
+}
+
 function parseByHeaders(text: string): ParseResult {
   const blocks = text
     .split(/(?=^\s*(?:question\s*:?\s*\d+|q\s*:?\s*\d+(?![^\S\n]*[a-zA-Z])))/im)

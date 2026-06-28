@@ -8,7 +8,7 @@ import { insertQuestions, getQuestionsForBank } from './db/questions';
 import { createAttempt, completeAttempt, getAttemptsForBank, getActiveAttempt, deleteAttempt } from './db/attempts';
 import { saveResponse, updateResponse, getResponsesForAttempt } from './db/responses';
 import { getWaterfallProgress, advanceWaterfall } from './db/waterfall';
-import { extractText } from './parser/fileExtractor';
+import { extractFileContent } from './parser/fileExtractor';
 import { parseExamDump } from './parser/ruleParser';
 import { generatePrompt } from './parser/promptGenerator';
 import { toJsonFileName } from './util/filename';
@@ -78,14 +78,14 @@ function registerIpcHandlers() {
     const ext = path.extname(filePath).toLowerCase();
     if (ext === '.json') {
       const text = await fs.readFile(filePath, 'utf-8');
-      return { text, fileName, isJson: true };
+      return { text, fileName, isJson: true, images: [] };
     }
-    const text = await extractText(filePath);
-    return { text, fileName, isJson: false };
+    const { text, images } = await extractFileContent(filePath);
+    return { text, fileName, isJson: false, images };
   });
 
-  ipcMain.handle(IPC.PARSE_FILE, async (_e, text: string) => {
-    return parseExamDump(text);
+  ipcMain.handle(IPC.PARSE_FILE, async (_e, text: string, images?: string[]) => {
+    return parseExamDump(text, images ?? []);
   });
 
   ipcMain.handle(IPC.INGEST_JSON, async (_e, json: string, name: string) => {

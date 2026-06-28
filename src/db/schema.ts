@@ -20,7 +20,21 @@ export function getDb(): Database.Database {
   return _db;
 }
 
+const QUESTIONS_DDL = `CREATE TABLE questions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bank_id INTEGER NOT NULL REFERENCES question_banks(id) ON DELETE CASCADE,
+  question_text TEXT NOT NULL,
+  question_type TEXT NOT NULL CHECK(question_type IN ('multiple_choice','true_false','multi_select','interactive')),
+  options TEXT NOT NULL,
+  correct_answers TEXT NOT NULL,
+  explanation TEXT,
+  links TEXT,
+  order_index INTEGER NOT NULL,
+  image_data TEXT
+)`;
+
 function runMigrations(db: Database.Database): void {
+  // question_banks has no FK deps — always safe to create first.
   db.exec(`
     CREATE TABLE IF NOT EXISTS question_banks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,19 +43,39 @@ function runMigrations(db: Database.Database): void {
       created_at INTEGER NOT NULL,
       question_count INTEGER NOT NULL DEFAULT 0
     );
+  `);
 
-    CREATE TABLE IF NOT EXISTS questions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      bank_id INTEGER NOT NULL REFERENCES question_banks(id) ON DELETE CASCADE,
-      question_text TEXT NOT NULL,
-      question_type TEXT NOT NULL CHECK(question_type IN ('multiple_choice','true_false','multi_select')),
-      options TEXT NOT NULL,
-      correct_answers TEXT NOT NULL,
-      explanation TEXT,
-      links TEXT,
-      order_index INTEGER NOT NULL
-    );
+  // Handle questions table separately so we can migrate existing rows.
+  const existingQSql = (
+    db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='questions'")
+      .get() as { sql: string } | undefined
+  )?.sql ?? '';
 
+  if (!existingQSql) {
+    // Fresh install — create with full schema.
+    db.exec(QUESTIONS_DDL);
+  } else if (!existingQSql.includes('image_data')) {
+    // CRITICAL: FK off before rename. With FK on, SQLite rewrites question_responses'
+    // FK to point at "questions_old", making DROP TABLE fail. With FK off the rename
+    // is transparent and question_responses keeps referencing "questions" by name.
+    db.pragma('foreign_keys = OFF');
+    try {
+      db.exec('ALTER TABLE questions RENAME TO questions_old');
+      db.exec(QUESTIONS_DDL);
+      db.exec(`
+        INSERT INTO questions
+          (id, bank_id, question_text, question_type, options, correct_answers, explanation, links, order_index, image_data)
+        SELECT id, bank_id, question_text, question_type, options, correct_answers, explanation, links, order_index, NULL
+        FROM questions_old
+      `);
+      db.exec('DROP TABLE questions_old');
+    } finally {
+      db.pragma('foreign_keys = ON');
+    }
+  }
+
+  // Remaining tables — safe now that questions exists.
+  db.exec(`
     CREATE TABLE IF NOT EXISTS quiz_attempts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       bank_id INTEGER NOT NULL REFERENCES question_banks(id) ON DELETE CASCADE,
@@ -72,11 +106,6 @@ function runMigrations(db: Database.Database): void {
     );
   `);
 
-  // Enforce one response per (attempt, question). SQLite can't add a constraint
-  // to an existing table, so we use a unique index — which also backs the
-  // ON CONFLICT upsert in saveResponse(). Drop any pre-existing duplicates
-  // (keeping the earliest row) first, otherwise index creation would fail on
-  // older databases written before this invariant existed.
   db.exec(`
     DELETE FROM question_responses
     WHERE id NOT IN (

@@ -4,7 +4,7 @@ import type { ElectronAPI, CreateAttemptInput, SaveResponseInput, CompleteAttemp
 
 const api: ElectronAPI = {
   importFile: () => ipcRenderer.invoke(IPC.IMPORT_FILE),
-  parseFile: (text) => ipcRenderer.invoke(IPC.PARSE_FILE, text),
+  parseFile: (text, images) => ipcRenderer.invoke(IPC.PARSE_FILE, text, images),
   ingestJSON: (json, name) => ipcRenderer.invoke(IPC.INGEST_JSON, json, name),
   loadBanks: () => ipcRenderer.invoke(IPC.LOAD_BANKS),
   loadQuestions: (bankId) => ipcRenderer.invoke(IPC.LOAD_QUESTIONS, bankId),

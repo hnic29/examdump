@@ -1,6 +1,6 @@
 import type { AiService } from './browser/services';
 
-export type QuestionType = 'multiple_choice' | 'true_false' | 'multi_select';
+export type QuestionType = 'multiple_choice' | 'true_false' | 'multi_select' | 'interactive';
 export type TimedMode = 'none' | 'total' | 'per_question' | 'both';
 
 export interface QuestionOption {
@@ -32,6 +32,7 @@ export interface Question {
   explanation: string | null;
   links: QuestionLink[] | null;
   orderIndex: number;
+  imageData: string | null;
 }
 
 export interface QuizAttempt {
@@ -68,6 +69,7 @@ export interface ParsedQuestion {
   correct_answers: string[];
   explanation: string | null;
   links: QuestionLink[] | null;
+  imageData?: string | null;
 }
 
 export interface ParseResult {
@@ -118,8 +120,8 @@ export type QuizStartConfig = Omit<CreateAttemptInput, 'bankId' | 'totalQuestion
 };
 
 export interface ElectronAPI {
-  importFile: () => Promise<{ text: string; fileName: string; isJson: boolean } | null>;
-  parseFile: (text: string) => Promise<ParseResult>;
+  importFile: () => Promise<{ text: string; fileName: string; isJson: boolean; images: string[] } | null>;
+  parseFile: (text: string, images?: string[]) => Promise<ParseResult>;
   ingestJSON: (json: string, name: string) => Promise<{ id: number; questionCount: number }>;
   loadBanks: () => Promise<QuestionBank[]>;
   loadQuestions: (bankId: number) => Promise<Question[]>;

@@ -2,7 +2,7 @@ import type { Question, QuestionOption, QuestionLink, ParsedQuestion } from '../
 import { getDb } from './schema';
 import { updateBankQuestionCount } from './banks';
 
-interface QuestionRow { id: number; bank_id: number; question_text: string; question_type: string; options: string; correct_answers: string; explanation: string | null; links: string | null; order_index: number; }
+interface QuestionRow { id: number; bank_id: number; question_text: string; question_type: string; options: string; correct_answers: string; explanation: string | null; links: string | null; order_index: number; image_data: string | null; }
 
 function toQuestion(r: QuestionRow): Question {
   return {
@@ -13,14 +13,15 @@ function toQuestion(r: QuestionRow): Question {
     explanation: r.explanation,
     links: r.links ? JSON.parse(r.links) as QuestionLink[] : null,
     orderIndex: r.order_index,
+    imageData: r.image_data,
   };
 }
 
 export function insertQuestions(bankId: number, parsed: ParsedQuestion[]): number {
   const db = getDb();
-  const stmt = db.prepare('INSERT INTO questions (bank_id, question_text, question_type, options, correct_answers, explanation, links, order_index) VALUES (?,?,?,?,?,?,?,?)');
+  const stmt = db.prepare('INSERT INTO questions (bank_id, question_text, question_type, options, correct_answers, explanation, links, order_index, image_data) VALUES (?,?,?,?,?,?,?,?,?)');
   db.transaction((qs: ParsedQuestion[]) => {
-    qs.forEach((q, i) => stmt.run(bankId, q.question, q.type, JSON.stringify(q.options), JSON.stringify(q.correct_answers), q.explanation ?? null, q.links ? JSON.stringify(q.links) : null, i));
+    qs.forEach((q, i) => stmt.run(bankId, q.question, q.type, JSON.stringify(q.options), JSON.stringify(q.correct_answers), q.explanation ?? null, q.links ? JSON.stringify(q.links) : null, i, q.imageData ?? null));
     updateBankQuestionCount(bankId, qs.length);
   })(parsed);
   return parsed.length;

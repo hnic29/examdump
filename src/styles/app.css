@@ -105,6 +105,7 @@ body {
 .badge-mc { background: #2196f320; color: #64b5f6; }
 .badge-tf { background: #9c27b020; color: #ce93d8; }
 .badge-ms { background: #ff980020; color: #ffcc80; }
+.badge-interactive { background: #00968820; color: #80cbc4; }
 
 .modal-overlay {
   position: fixed; inset: 0;
