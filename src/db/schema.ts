@@ -54,21 +54,26 @@ function runMigrations(db: Database.Database): void {
   if (!existingQSql) {
     // Fresh install — create with full schema.
     db.exec(QUESTIONS_DDL);
-  } else if (!existingQSql.includes('image_data')) {
-    // CRITICAL: FK off before rename. With FK on, SQLite rewrites question_responses'
-    // FK to point at "questions_old", making DROP TABLE fail. With FK off the rename
-    // is transparent and question_responses keeps referencing "questions" by name.
+  } else if (!existingQSql.includes('image_data') || !existingQSql.includes("'interactive'")) {
+    // FK must be OFF before renaming so SQLite doesn't rewrite question_responses'
+    // FK reference from "questions" to "questions_old", which would make DROP fail.
     db.pragma('foreign_keys = OFF');
     try {
-      db.exec('ALTER TABLE questions RENAME TO questions_old');
-      db.exec(QUESTIONS_DDL);
-      db.exec(`
-        INSERT INTO questions
-          (id, bank_id, question_text, question_type, options, correct_answers, explanation, links, order_index, image_data)
-        SELECT id, bank_id, question_text, question_type, options, correct_answers, explanation, links, order_index, NULL
-        FROM questions_old
-      `);
-      db.exec('DROP TABLE questions_old');
+      // Guard against a previous failed migration leaving questions_old behind.
+      db.exec('DROP TABLE IF EXISTS questions_old');
+      // Run the whole dance in one atomic transaction — if any step fails, the
+      // rename rolls back too, leaving the DB in its original state.
+      db.transaction(() => {
+        db.exec('ALTER TABLE questions RENAME TO questions_old');
+        db.exec(QUESTIONS_DDL);
+        db.exec(`
+          INSERT INTO questions
+            (id, bank_id, question_text, question_type, options, correct_answers, explanation, links, order_index, image_data)
+          SELECT id, bank_id, question_text, question_type, options, correct_answers, explanation, links, order_index, NULL
+          FROM questions_old
+        `);
+        db.exec('DROP TABLE questions_old');
+      })();
     } finally {
       db.pragma('foreign_keys = ON');
     }
