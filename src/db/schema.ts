@@ -111,6 +111,37 @@ function runMigrations(db: Database.Database): void {
     );
   `);
 
+  // Repair broken FK in question_responses caused by a prior migration that ran
+  // ALTER TABLE questions RENAME with foreign_keys = ON. SQLite rewrote the FK
+  // reference from "questions" to "questions_old"; now that questions_old is gone
+  // any DML on question_responses (including the dedup DELETE below) fails with
+  // "no such table: questions_old". Recreate the table with the correct FK.
+  const qrSql = (
+    db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='question_responses'")
+      .get() as { sql: string } | undefined
+  )?.sql ?? '';
+  if (qrSql.includes('questions_old')) {
+    db.pragma('foreign_keys = OFF');
+    try {
+      db.exec('DROP TABLE IF EXISTS question_responses_old');
+      db.transaction(() => {
+        db.exec('ALTER TABLE question_responses RENAME TO question_responses_old');
+        db.exec(`CREATE TABLE question_responses (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          attempt_id INTEGER NOT NULL REFERENCES quiz_attempts(id) ON DELETE CASCADE,
+          question_id INTEGER NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+          selected_answers TEXT NOT NULL,
+          is_correct INTEGER NOT NULL,
+          time_taken INTEGER NOT NULL
+        )`);
+        db.exec('INSERT INTO question_responses SELECT * FROM question_responses_old');
+        db.exec('DROP TABLE question_responses_old');
+      })();
+    } finally {
+      db.pragma('foreign_keys = ON');
+    }
+  }
+
   db.exec(`
     DELETE FROM question_responses
     WHERE id NOT IN (
