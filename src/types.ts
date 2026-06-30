@@ -103,6 +103,15 @@ export interface CompleteAttemptInput {
   score: number;
 }
 
+export interface UpdateQuestionInput {
+  id: number;
+  questionText: string;
+  options: QuestionOption[];
+  correctAnswers: string[];
+  explanation: string | null;
+  imageData: string | null;
+}
+
 export interface WaterfallProgress {
   bankId: number;
   introducedCount: number;
@@ -110,7 +119,7 @@ export interface WaterfallProgress {
 }
 
 export type QuizModeConfig =
-  | { mode: 'normal' }
+  | { mode: 'normal'; rangeFrom: number; rangeTo: number }
   | { mode: 'waterfall'; dailyCount: number }
   | { mode: 'practice'; questionIds: number[] };
 
@@ -145,4 +154,5 @@ export interface ElectronAPI {
   advanceWaterfall: (bankId: number, dailyCount: number, totalQuestions: number) => Promise<WaterfallProgress>;
   getActiveAttempt: (bankId: number) => Promise<QuizAttempt | null>;
   deleteAttempt: (attemptId: number) => Promise<void>;
+  updateQuestion: (input: UpdateQuestionInput) => Promise<void>;
 }

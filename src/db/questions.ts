@@ -30,3 +30,9 @@ export function insertQuestions(bankId: number, parsed: ParsedQuestion[]): numbe
 export function getQuestionsForBank(bankId: number): Question[] {
   return (getDb().prepare('SELECT * FROM questions WHERE bank_id = ? ORDER BY order_index').all(bankId) as QuestionRow[]).map(toQuestion);
 }
+
+export function updateQuestion(id: number, data: { questionText: string; options: QuestionOption[]; correctAnswers: string[]; explanation: string | null; imageData: string | null }): void {
+  getDb().prepare(
+    'UPDATE questions SET question_text = ?, options = ?, correct_answers = ?, explanation = ?, image_data = ? WHERE id = ?'
+  ).run(data.questionText, JSON.stringify(data.options), JSON.stringify(data.correctAnswers), data.explanation, data.imageData, id);
+}

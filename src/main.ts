@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import started from 'electron-squirrel-startup';
 import { initDb } from './db/schema';
 import { getAllBanks, createBank, deleteBank, getBankStats } from './db/banks';
-import { insertQuestions, getQuestionsForBank } from './db/questions';
+import { insertQuestions, getQuestionsForBank, updateQuestion } from './db/questions';
 import { createAttempt, completeAttempt, getAttemptsForBank, getActiveAttempt, deleteAttempt } from './db/attempts';
 import { saveResponse, updateResponse, getResponsesForAttempt } from './db/responses';
 import { getWaterfallProgress, advanceWaterfall } from './db/waterfall';
@@ -16,7 +16,7 @@ import { showReference, showAiService, closePanel, setPanelRatio } from './brows
 import { isAiService } from './browser/services';
 import { createSplashWindow } from './splash';
 import { IPC } from './ipc/channels';
-import type { ParsedQuestion, CreateAttemptInput, SaveResponseInput, CompleteAttemptInput } from './types';
+import type { ParsedQuestion, CreateAttemptInput, SaveResponseInput, CompleteAttemptInput, UpdateQuestionInput } from './types';
 
 if (started) app.quit();
 
@@ -218,6 +218,20 @@ function registerIpcHandlers() {
   ipcMain.handle(IPC.GET_ACTIVE_ATTEMPT, (_e, bankId: number) => getActiveAttempt(requirePosInt(bankId, 'bankId')));
 
   ipcMain.handle(IPC.DELETE_ATTEMPT, (_e, attemptId: number) => deleteAttempt(requirePosInt(attemptId, 'attemptId')));
+
+  ipcMain.handle(IPC.UPDATE_QUESTION, (_e, input: UpdateQuestionInput) => {
+    requirePosInt(input.id, 'id');
+    if (typeof input.questionText !== 'string' || !input.questionText.trim()) throw new Error('questionText is required');
+    if (!Array.isArray(input.options) || input.options.length === 0) throw new Error('options must be a non-empty array');
+    if (!Array.isArray(input.correctAnswers) || input.correctAnswers.length === 0) throw new Error('correctAnswers must be non-empty');
+    updateQuestion(input.id, {
+      questionText: input.questionText.trim(),
+      options: input.options,
+      correctAnswers: input.correctAnswers,
+      explanation: input.explanation ?? null,
+      imageData: input.imageData ?? null,
+    });
+  });
 
   ipcMain.handle(IPC.RESIZE_PANEL, (_e, ratio: number) => {
     if (mainWindow && Number.isFinite(ratio)) setPanelRatio(mainWindow, ratio);

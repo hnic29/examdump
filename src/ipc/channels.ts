@@ -24,4 +24,5 @@ export const IPC = {
   GET_ACTIVE_ATTEMPT: 'get-active-attempt',
   DELETE_ATTEMPT: 'delete-attempt',
   UPDATE_RESPONSE: 'update-response',
+  UPDATE_QUESTION: 'update-question',
 } as const;

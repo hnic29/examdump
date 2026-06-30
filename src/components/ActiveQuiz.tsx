@@ -225,7 +225,9 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
       const ids = new Set(cfg.quizMode.questionIds);
       questions = allQuestions.filter(q => ids.has(q.id));
     } else {
-      questions = allQuestions;
+      const from = cfg.quizMode.rangeFrom - 1; // 1-based → 0-based
+      const to = cfg.quizMode.rangeTo;
+      questions = allQuestions.slice(from, to);
     }
 
     if (cfg.scramble) questions = fisherYates(questions);
@@ -451,6 +453,13 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
             </span>
           </div>
           <p style={{ fontSize: 19, lineHeight: 1.6, marginBottom: 18 }}>{question.questionText}</p>
+          {question.imageData && (
+            <img
+              src={question.imageData}
+              alt="Question image"
+              style={{ maxWidth: '100%', borderRadius: 6, border: '1px solid #2d3a52', marginBottom: 18 }}
+            />
+          )}
           {question.options.map(opt => {
             const isCorrect = question.correctAnswers.includes(opt.id);
             return (
@@ -502,6 +511,13 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
             </span>
           </div>
           <p style={{ fontSize: 19, lineHeight: 1.6, marginBottom: 18 }}>{question.questionText}</p>
+          {question.imageData && (
+            <img
+              src={question.imageData}
+              alt="Question image"
+              style={{ maxWidth: '100%', borderRadius: 6, border: '1px solid #2d3a52', marginBottom: 18 }}
+            />
+          )}
           {question.questionType === 'multi_select' && (
             <p style={{ fontSize: 13, color: '#8b9cb0', marginBottom: 10 }}>Select all that apply</p>
           )}

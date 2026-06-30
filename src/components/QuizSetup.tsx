@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { TimedMode, QuizStartConfig, WaterfallProgress, Question } from '../types';
+import type { TimedMode, QuizStartConfig, WaterfallProgress, Question, QuestionOption } from '../types';
 
 interface Props {
   bankId: number;
@@ -17,11 +17,25 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
   const [perQuestionSeconds, setPerQuestionSeconds] = useState('60');
   const [showAnswerImmediately, setShowAnswerImmediately] = useState(true);
   const [scramble, setScramble] = useState(false);
+  const [rangeFrom, setRangeFrom] = useState('1');
+  const [rangeTo, setRangeTo] = useState(String(questionCount));
+
+  useEffect(() => { setRangeTo(String(questionCount)); }, [questionCount]);
 
   // Practice mode state
   const [practiceQuestions, setPracticeQuestions] = useState<Question[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [practiceLoading, setPracticeLoading] = useState(false);
+
+  // Question editor state
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [editText, setEditText] = useState('');
+  const [editOptions, setEditOptions] = useState<QuestionOption[]>([]);
+  const [editCorrect, setEditCorrect] = useState<Set<string>>(new Set());
+  const [editExplanation, setEditExplanation] = useState('');
+  const [editImageData, setEditImageData] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
     window.electronAPI.getWaterfallProgress(bankId).then(setWaterfallProgress);
@@ -45,6 +59,76 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
     });
   };
 
+  const openEditor = (q: Question) => {
+    setEditingQuestion(q);
+    setEditText(q.questionText);
+    setEditOptions(q.options.map(o => ({ ...o })));
+    setEditCorrect(new Set(q.correctAnswers));
+    setEditExplanation(q.explanation ?? '');
+    setEditImageData(q.imageData ?? null);
+    setEditError(null);
+  };
+
+  const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setEditImageData(reader.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const addOption = () => {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const usedIds = new Set(editOptions.map(o => o.id));
+    const nextId = letters.split('').find(l => !usedIds.has(l)) ?? String(editOptions.length + 1);
+    setEditOptions(prev => [...prev, { id: nextId, text: '' }]);
+  };
+
+  const removeOption = (id: string) => {
+    setEditOptions(prev => prev.filter(o => o.id !== id));
+    setEditCorrect(prev => { const n = new Set(prev); n.delete(id); return n; });
+  };
+
+  const toggleEditCorrect = (id: string) => {
+    setEditCorrect(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editingQuestion || editSaving) return;
+    const options = editOptions.filter(o => o.text.trim());
+    const correctAnswers = [...editCorrect].filter(id => options.some(o => o.id === id));
+    if (!editText.trim()) { setEditError('Question text is required.'); return; }
+    if (options.length === 0) { setEditError('At least one option is required.'); return; }
+    if (correctAnswers.length === 0) { setEditError('At least one correct answer must be selected.'); return; }
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      await window.electronAPI.updateQuestion({
+        id: editingQuestion.id,
+        questionText: editText.trim(),
+        options,
+        correctAnswers,
+        explanation: editExplanation.trim() || null,
+        imageData: editImageData,
+      });
+      setPracticeQuestions(prev => prev.map(q =>
+        q.id === editingQuestion.id
+          ? { ...q, questionText: editText.trim(), options, correctAnswers, explanation: editExplanation.trim() || null, imageData: editImageData }
+          : q
+      ));
+      setEditingQuestion(null);
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : 'Save failed.');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const handleStart = () => {
     const totalLimit = (timedMode === 'total' || timedMode === 'both')
       ? parseInt(totalMinutes, 10) * 60 : null;
@@ -55,12 +139,15 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
     if (perQLimit !== null && !Number.isFinite(perQLimit)) return;
     if (callMode === 'practice' && selectedIds.size === 0) return;
 
+    const from = Math.max(1, Math.min(parseInt(rangeFrom, 10) || 1, questionCount));
+    const to = Math.max(from, Math.min(parseInt(rangeTo, 10) || questionCount, questionCount));
+
     const quizMode: QuizStartConfig['quizMode'] =
       callMode === 'waterfall'
         ? { mode: 'waterfall', dailyCount: Math.max(1, parseInt(dailyCount, 10) || 10) }
         : callMode === 'practice'
         ? { mode: 'practice', questionIds: [...selectedIds] }
-        : { mode: 'normal' };
+        : { mode: 'normal', rangeFrom: from, rangeTo: to };
 
     onStart({ timedMode, totalTimeLimit: totalLimit, perQuestionTimeLimit: perQLimit, showAnswerImmediately, quizMode, scramble });
   };
@@ -96,6 +183,36 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
             ))}
           </div>
         </div>
+
+        {callMode === 'normal' && (
+          <div className="form-row">
+            <label className="form-label">Question range</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                className="form-input"
+                type="number"
+                min="1"
+                max={questionCount}
+                value={rangeFrom}
+                onChange={e => setRangeFrom(e.target.value)}
+                style={{ width: 70 }}
+              />
+              <span style={{ color: '#8b9cb0', fontSize: 13 }}>to</span>
+              <input
+                className="form-input"
+                type="number"
+                min="1"
+                max={questionCount}
+                value={rangeTo}
+                onChange={e => setRangeTo(e.target.value)}
+                style={{ width: 70 }}
+              />
+              <span style={{ color: '#8b9cb0', fontSize: 12 }}>
+                ({Math.max(0, Math.min(parseInt(rangeTo, 10) || 0, questionCount) - Math.max(1, parseInt(rangeFrom, 10) || 1) + 1)} questions)
+              </span>
+            </div>
+          </div>
+        )}
 
         {callMode === 'waterfall' && (
           <div className="form-row">
@@ -183,11 +300,18 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
                       <span style={{ color: '#5a7a9a', fontSize: 11, minWidth: 30, flexShrink: 0 }}>
                         Q{q.orderIndex + 1}
                       </span>
-                      <span style={{ fontSize: 12, lineHeight: '1.4', color: checked ? '#e2e8f0' : '#8b9cb0' }}>
+                      <span style={{ fontSize: 12, lineHeight: '1.4', color: checked ? '#e2e8f0' : '#8b9cb0', flex: 1 }}>
                         {q.questionText.length > 120
                           ? q.questionText.slice(0, 120) + '…'
                           : q.questionText}
                       </span>
+                      <button
+                        className="btn btn-secondary"
+                        style={{ padding: '2px 8px', fontSize: 10, flexShrink: 0, marginTop: 1 }}
+                        onClick={e => { e.stopPropagation(); openEditor(q); }}
+                      >
+                        Edit
+                      </button>
                     </div>
                   );
                 })}
@@ -312,6 +436,120 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
           <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
         </div>
       </div>
+
+      {editingQuestion && (
+        <div className="modal-overlay" style={{ zIndex: 200 }}>
+          <div className="modal" style={{ maxWidth: 580, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ marginBottom: 4 }}>Edit Question</h3>
+            <p style={{ color: '#5a7a9a', fontSize: 11, marginBottom: 16 }}>Q{editingQuestion.orderIndex + 1}</p>
+
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              <div className="form-row">
+                <label className="form-label">Question text</label>
+                <textarea
+                  value={editText}
+                  onChange={e => setEditText(e.target.value)}
+                  rows={4}
+                  style={{ width: '100%', background: '#0d1117', border: '1px solid #2d3748', borderRadius: 4, color: '#e2e8f0', padding: '8px 10px', fontSize: 13, lineHeight: 1.5, resize: 'vertical', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div className="form-row">
+                <label className="form-label">Image <span style={{ color: '#5a7a9a', fontWeight: 400 }}>(optional)</span></label>
+                {editImageData ? (
+                  <div>
+                    <img
+                      src={editImageData}
+                      alt="Question image"
+                      style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 4, border: '1px solid #2d3748', marginBottom: 8, display: 'block' }}
+                    />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <label className="btn btn-secondary" style={{ cursor: 'pointer', fontSize: 11, padding: '3px 10px' }}>
+                        Replace
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageFile} />
+                      </label>
+                      <button
+                        className="btn btn-secondary"
+                        style={{ fontSize: 11, padding: '3px 10px', color: '#e57373' }}
+                        onClick={() => setEditImageData(null)}
+                      >
+                        Remove image
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="btn btn-secondary" style={{ cursor: 'pointer', fontSize: 11, padding: '3px 10px', display: 'inline-block' }}>
+                    + Add image
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageFile} />
+                  </label>
+                )}
+              </div>
+
+              <div className="form-row">
+                <label className="form-label">Options <span style={{ color: '#5a7a9a', fontWeight: 400 }}>(check = correct answer)</span></label>
+                {editOptions.map((opt, i) => (
+                  <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <input
+                      type="checkbox"
+                      checked={editCorrect.has(opt.id)}
+                      onChange={() => toggleEditCorrect(opt.id)}
+                      style={{ flexShrink: 0 }}
+                    />
+                    <span style={{ color: '#5a7a9a', fontSize: 12, minWidth: 18, flexShrink: 0, fontWeight: 700 }}>{opt.id}</span>
+                    <input
+                      className="form-input"
+                      value={opt.text}
+                      onChange={e => setEditOptions(prev => prev.map((o, j) => j === i ? { ...o, text: e.target.value } : o))}
+                      style={{ flex: 1 }}
+                      placeholder="Option text"
+                    />
+                    <button
+                      className="btn btn-secondary"
+                      style={{ padding: '3px 8px', fontSize: 12, flexShrink: 0, color: '#e57373' }}
+                      onClick={() => removeOption(opt.id)}
+                      disabled={editOptions.length <= 1}
+                      title="Remove option"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  className="btn btn-secondary"
+                  style={{ fontSize: 11, padding: '3px 10px', marginTop: 4 }}
+                  onClick={addOption}
+                >
+                  + Add option
+                </button>
+              </div>
+
+              <div className="form-row">
+                <label className="form-label">Explanation <span style={{ color: '#5a7a9a', fontWeight: 400 }}>(optional)</span></label>
+                <textarea
+                  value={editExplanation}
+                  onChange={e => setEditExplanation(e.target.value)}
+                  rows={3}
+                  style={{ width: '100%', background: '#0d1117', border: '1px solid #2d3748', borderRadius: 4, color: '#e2e8f0', padding: '8px 10px', fontSize: 13, lineHeight: 1.5, resize: 'vertical', boxSizing: 'border-box' }}
+                  placeholder="Why is the answer correct? (shown during practice)"
+                />
+              </div>
+            </div>
+
+            {editError && (
+              <p style={{ color: '#e57373', fontSize: 12, marginTop: 8, marginBottom: 0 }}>{editError}</p>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 16, paddingTop: 12, borderTop: '1px solid #1e2a3a' }}>
+              <button className="btn btn-primary" onClick={saveEdit} disabled={editSaving}>
+                {editSaving ? 'Saving…' : 'Save'}
+              </button>
+              <button className="btn btn-secondary" onClick={() => setEditingQuestion(null)} disabled={editSaving}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

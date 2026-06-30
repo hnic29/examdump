@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC } from './ipc/channels';
-import type { ElectronAPI, CreateAttemptInput, SaveResponseInput, CompleteAttemptInput } from './types';
+import type { ElectronAPI, CreateAttemptInput, SaveResponseInput, CompleteAttemptInput, UpdateQuestionInput } from './types';
 
 const api: ElectronAPI = {
   importFile: () => ipcRenderer.invoke(IPC.IMPORT_FILE),
@@ -28,6 +28,7 @@ const api: ElectronAPI = {
     ipcRenderer.invoke(IPC.ADVANCE_WATERFALL, bankId, dailyCount, totalQuestions),
   getActiveAttempt: (bankId) => ipcRenderer.invoke(IPC.GET_ACTIVE_ATTEMPT, bankId),
   deleteAttempt: (attemptId) => ipcRenderer.invoke(IPC.DELETE_ATTEMPT, attemptId),
+  updateQuestion: (input: UpdateQuestionInput) => ipcRenderer.invoke(IPC.UPDATE_QUESTION, input),
   onPanelStateChanged: (cb) => {
     const handler = (_: unknown, open: boolean) => cb(open);
     ipcRenderer.on(IPC.PANEL_STATE_CHANGED, handler);
