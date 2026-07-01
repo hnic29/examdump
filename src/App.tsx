@@ -5,6 +5,7 @@ import { ImportFlow } from './components/ImportFlow';
 import { ActiveQuiz } from './components/ActiveQuiz';
 import { Results } from './components/Results';
 import { History } from './components/History';
+import { FlaggedLog } from './components/FlaggedLog';
 import { Changelog } from './components/Changelog';
 import { StatusBar } from './components/StatusBar';
 import { AI_SERVICES, type AiService } from './browser/services';
@@ -16,6 +17,7 @@ type AppView =
   | { screen: 'quiz'; bankId: number }
   | { screen: 'results'; attemptId: number; bankId: number }
   | { screen: 'history'; bankId: number }
+  | { screen: 'flagged'; bankId: number }
   | { screen: 'changelog' };
 
 export function App() {
@@ -81,6 +83,7 @@ export function App() {
         onSelectBank={(id) => setView({ screen: 'library', selectedBankId: id })}
         onImport={() => setView({ screen: 'import' })}
         onHistory={(bankId) => setView({ screen: 'history', bankId })}
+        onFlagged={(bankId) => setView({ screen: 'flagged', bankId })}
         onChangelog={() => setView({ screen: 'changelog' })}
         onAiHelper={() => selectAiService('claude')}
       />
@@ -122,6 +125,12 @@ export function App() {
         )}
         {view.screen === 'history' && (
           <History
+            bankId={view.bankId}
+            onBack={() => setView({ screen: 'library', selectedBankId: view.bankId })}
+          />
+        )}
+        {view.screen === 'flagged' && (
+          <FlaggedLog
             bankId={view.bankId}
             onBack={() => setView({ screen: 'library', selectedBankId: view.bankId })}
           />

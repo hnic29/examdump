@@ -103,6 +103,13 @@ export interface CompleteAttemptInput {
   score: number;
 }
 
+export interface FlaggedQuestion {
+  questionId: number;
+  questionText: string;
+  orderIndex: number;
+  flaggedAt: number;
+}
+
 export interface UpdateQuestionInput {
   id: number;
   questionText: string;
@@ -155,4 +162,7 @@ export interface ElectronAPI {
   getActiveAttempt: (bankId: number) => Promise<QuizAttempt | null>;
   deleteAttempt: (attemptId: number) => Promise<void>;
   updateQuestion: (input: UpdateQuestionInput) => Promise<void>;
+  flagQuestion: (questionId: number) => Promise<void>;
+  unflagQuestion: (questionId: number) => Promise<void>;
+  getFlaggedQuestions: (bankId: number) => Promise<FlaggedQuestion[]>;
 }

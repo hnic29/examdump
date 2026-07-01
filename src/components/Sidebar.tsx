@@ -7,11 +7,12 @@ interface Props {
   onSelectBank: (id: number) => void;
   onImport: () => void;
   onHistory: (bankId: number) => void;
+  onFlagged: (bankId: number) => void;
   onChangelog: () => void;
   onAiHelper: () => void;
 }
 
-export function Sidebar({ banks, selectedBankId, onSelectBank, onImport, onHistory, onChangelog, onAiHelper }: Props) {
+export function Sidebar({ banks, selectedBankId, onSelectBank, onImport, onHistory, onFlagged, onChangelog, onAiHelper }: Props) {
   return (
     <div className="sidebar">
       <div className="sidebar-header">ExamDump</div>
@@ -42,6 +43,11 @@ export function Sidebar({ banks, selectedBankId, onSelectBank, onImport, onHisto
         {selectedBankId !== null && (
           <button className="sidebar-nav-btn" onClick={() => onHistory(selectedBankId)}>
             📊 History
+          </button>
+        )}
+        {selectedBankId !== null && (
+          <button className="sidebar-nav-btn" onClick={() => onFlagged(selectedBankId)}>
+            🚩 Flagged
           </button>
         )}
         <button className="sidebar-nav-btn" onClick={onAiHelper}>

@@ -109,6 +109,11 @@ function runMigrations(db: Database.Database): void {
       introduced_count INTEGER NOT NULL,
       last_session_date TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS question_flags (
+      question_id INTEGER PRIMARY KEY REFERENCES questions(id) ON DELETE CASCADE,
+      flagged_at INTEGER NOT NULL
+    );
   `);
 
   // Repair broken FK in question_responses caused by a prior migration that ran

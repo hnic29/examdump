@@ -5,6 +5,7 @@ import started from 'electron-squirrel-startup';
 import { initDb } from './db/schema';
 import { getAllBanks, createBank, deleteBank, getBankStats } from './db/banks';
 import { insertQuestions, getQuestionsForBank, updateQuestion } from './db/questions';
+import { flagQuestion, unflagQuestion, getFlaggedForBank } from './db/flags';
 import { createAttempt, completeAttempt, getAttemptsForBank, getActiveAttempt, deleteAttempt } from './db/attempts';
 import { saveResponse, updateResponse, getResponsesForAttempt } from './db/responses';
 import { getWaterfallProgress, advanceWaterfall } from './db/waterfall';
@@ -232,6 +233,10 @@ function registerIpcHandlers() {
       imageData: input.imageData ?? null,
     });
   });
+
+  ipcMain.handle(IPC.FLAG_QUESTION, (_e, questionId: number) => flagQuestion(requirePosInt(questionId, 'questionId')));
+  ipcMain.handle(IPC.UNFLAG_QUESTION, (_e, questionId: number) => unflagQuestion(requirePosInt(questionId, 'questionId')));
+  ipcMain.handle(IPC.GET_FLAGGED_QUESTIONS, (_e, bankId: number) => getFlaggedForBank(requirePosInt(bankId, 'bankId')));
 
   ipcMain.handle(IPC.RESIZE_PANEL, (_e, ratio: number) => {
     if (mainWindow && Number.isFinite(ratio)) setPanelRatio(mainWindow, ratio);

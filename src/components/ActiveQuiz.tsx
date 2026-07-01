@@ -129,6 +129,7 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
   const [resumeAttempt, setResumeAttempt] = useState<QuizAttempt | null>(null);
   const [resumeAnswered, setResumeAnswered] = useState(0);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [flaggedIds, setFlaggedIds] = useState<Set<number>>(new Set());
   const finishingRef = useRef(false);
   const submittingRef = useRef(false);
 
@@ -137,8 +138,12 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
     (async () => {
       const qs = await window.electronAPI.loadQuestions(bankId);
       if (!cancelled) setQuestionCount(qs.length);
-      const active = await window.electronAPI.getActiveAttempt(bankId);
+      const [active, flagged] = await Promise.all([
+        window.electronAPI.getActiveAttempt(bankId),
+        window.electronAPI.getFlaggedQuestions(bankId),
+      ]);
       if (cancelled) return;
+      setFlaggedIds(new Set(flagged.map(f => f.questionId)));
       if (active) {
         const saved = await window.electronAPI.getResponses(active.id);
         if (cancelled) return;
@@ -149,6 +154,16 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
     })();
     return () => { cancelled = true; };
   }, [bankId]);
+
+  const toggleFlag = async (questionId: number) => {
+    if (flaggedIds.has(questionId)) {
+      setFlaggedIds(prev => { const n = new Set(prev); n.delete(questionId); return n; });
+      await window.electronAPI.unflagQuestion(questionId);
+    } else {
+      setFlaggedIds(prev => new Set(prev).add(questionId));
+      await window.electronAPI.flagQuestion(questionId);
+    }
+  };
 
   const handleTotalExpire = () => {
     if (state.attemptId && !finishingRef.current) finishQuiz(state.attemptId, state.responses, state.questions);
@@ -364,9 +379,18 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
     <div style={{ maxWidth: 760 }}>
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={{ color: '#8b9cb0', fontSize: 12 }}>
-          Question {state.currentIndex + 1} of {state.questions.length} &nbsp;·&nbsp; {state.responses.filter(r => r.isCorrect).length} correct
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ color: '#8b9cb0', fontSize: 12 }}>
+            Question {state.currentIndex + 1} of {state.questions.length} &nbsp;·&nbsp; {state.responses.filter(r => r.isCorrect).length} correct
+          </span>
+          <button
+            onClick={() => toggleFlag(question.id)}
+            title={flaggedIds.has(question.id) ? 'Flagged for review — click to unflag' : 'Flag for review'}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, padding: '2px 4px', color: flaggedIds.has(question.id) ? '#f59e0b' : '#4a5568', lineHeight: 1 }}
+          >
+            {flaggedIds.has(question.id) ? '🚩' : '⚑'}
+          </button>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {totalSecs && (
             <span style={{ fontFamily: 'monospace', color: totalTimer.secondsLeft < 300 ? '#f44336' : '#ff9800', fontWeight: 700 }}>

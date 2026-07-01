@@ -25,4 +25,7 @@ export const IPC = {
   DELETE_ATTEMPT: 'delete-attempt',
   UPDATE_RESPONSE: 'update-response',
   UPDATE_QUESTION: 'update-question',
+  FLAG_QUESTION: 'flag-question',
+  UNFLAG_QUESTION: 'unflag-question',
+  GET_FLAGGED_QUESTIONS: 'get-flagged-questions',
 } as const;
