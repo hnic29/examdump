@@ -6,6 +6,7 @@ import { initDb } from './db/schema';
 import { getAllBanks, createBank, deleteBank, getBankStats } from './db/banks';
 import { insertQuestions, getQuestionsForBank, updateQuestion } from './db/questions';
 import { flagQuestion, unflagQuestion, getFlaggedForBank } from './db/flags';
+import { saveGameScore, getBestScores } from './db/games';
 import { createAttempt, completeAttempt, getAttemptsForBank, getActiveAttempt, deleteAttempt } from './db/attempts';
 import { saveResponse, updateResponse, getResponsesForAttempt } from './db/responses';
 import { getWaterfallProgress, advanceWaterfall } from './db/waterfall';
@@ -237,6 +238,13 @@ function registerIpcHandlers() {
   ipcMain.handle(IPC.FLAG_QUESTION, (_e, questionId: number) => flagQuestion(requirePosInt(questionId, 'questionId')));
   ipcMain.handle(IPC.UNFLAG_QUESTION, (_e, questionId: number) => unflagQuestion(requirePosInt(questionId, 'questionId')));
   ipcMain.handle(IPC.GET_FLAGGED_QUESTIONS, (_e, bankId: number) => getFlaggedForBank(requirePosInt(bankId, 'bankId')));
+
+  ipcMain.handle(IPC.GET_GAME_SCORES, (_e, bankId: number) => getBestScores(requirePosInt(bankId, 'bankId')));
+  ipcMain.handle(IPC.SAVE_GAME_SCORE, (_e, bankId: number, gameType: string, score: number) => {
+    requirePosInt(bankId, 'bankId');
+    if (!Number.isFinite(score) || score < 0) throw new Error('Invalid score');
+    saveGameScore(bankId, gameType as Parameters<typeof saveGameScore>[1], Math.floor(score));
+  });
 
   ipcMain.handle(IPC.RESIZE_PANEL, (_e, ratio: number) => {
     if (mainWindow && Number.isFinite(ratio)) setPanelRatio(mainWindow, ratio);

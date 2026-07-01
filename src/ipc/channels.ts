@@ -28,4 +28,6 @@ export const IPC = {
   FLAG_QUESTION: 'flag-question',
   UNFLAG_QUESTION: 'unflag-question',
   GET_FLAGGED_QUESTIONS: 'get-flagged-questions',
+  GET_GAME_SCORES: 'get-game-scores',
+  SAVE_GAME_SCORE: 'save-game-score',
 } as const;

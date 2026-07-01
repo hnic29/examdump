@@ -1,5 +1,7 @@
 import type { AiService } from './browser/services';
 
+export type GameType = 'card-picker' | 'card-hunter-1' | 'card-hunter-2' | 'card-coupler' | 'card-sweeper' | 'elimination' | 'crossword';
+
 export type QuestionType = 'multiple_choice' | 'true_false' | 'multi_select' | 'interactive';
 export type TimedMode = 'none' | 'total' | 'per_question' | 'both';
 
@@ -165,4 +167,6 @@ export interface ElectronAPI {
   flagQuestion: (questionId: number) => Promise<void>;
   unflagQuestion: (questionId: number) => Promise<void>;
   getFlaggedQuestions: (bankId: number) => Promise<FlaggedQuestion[]>;
+  getGameScores: (bankId: number) => Promise<Partial<Record<GameType, number>>>;
+  saveGameScore: (bankId: number, gameType: GameType, score: number) => Promise<void>;
 }

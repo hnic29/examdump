@@ -1,7 +1,7 @@
 {
   "name": "examdump",
   "productName": "ExamDump",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Desktop exam-prep and quiz application",
   "main": ".vite/build/main.js",
   "private": true,

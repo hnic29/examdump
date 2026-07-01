@@ -33,6 +33,8 @@ const api: ElectronAPI = {
   flagQuestion: (questionId) => ipcRenderer.invoke(IPC.FLAG_QUESTION, questionId),
   unflagQuestion: (questionId) => ipcRenderer.invoke(IPC.UNFLAG_QUESTION, questionId),
   getFlaggedQuestions: (bankId) => ipcRenderer.invoke(IPC.GET_FLAGGED_QUESTIONS, bankId),
+  getGameScores: (bankId) => ipcRenderer.invoke(IPC.GET_GAME_SCORES, bankId),
+  saveGameScore: (bankId, gameType, score) => ipcRenderer.invoke(IPC.SAVE_GAME_SCORE, bankId, gameType, score),
   onPanelStateChanged: (cb) => {
     const handler = (_: unknown, open: boolean) => cb(open);
     ipcRenderer.on(IPC.PANEL_STATE_CHANGED, handler);

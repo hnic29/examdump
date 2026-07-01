@@ -114,6 +114,14 @@ function runMigrations(db: Database.Database): void {
       question_id INTEGER PRIMARY KEY REFERENCES questions(id) ON DELETE CASCADE,
       flagged_at INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS game_scores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bank_id INTEGER NOT NULL REFERENCES question_banks(id) ON DELETE CASCADE,
+      game_type TEXT NOT NULL,
+      score INTEGER NOT NULL,
+      played_at INTEGER NOT NULL
+    );
   `);
 
   // Repair broken FK in question_responses caused by a prior migration that ran
