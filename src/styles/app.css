@@ -51,7 +51,7 @@ body {
 .sidebar-bank-item:hover { background: #232b3e; }
 .sidebar-bank-item.active { background: #2196f320; color: #64b5f6; }
 
-.sidebar-nav { border-top: 1px solid #2d3a52; padding: 8px 0; }
+.sidebar-nav { border-top: 1px solid #2d3a52; padding: 8px 0 24px; }
 
 .sidebar-nav-btn {
   display: flex;
