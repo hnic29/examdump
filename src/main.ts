@@ -1,6 +1,7 @@
-import { app, BrowserWindow, ipcMain, dialog, clipboard } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, clipboard, screen } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { readFileSync, writeFileSync } from 'node:fs';
 import started from 'electron-squirrel-startup';
 import { initDb } from './db/schema';
 import { getAllBanks, createBank, deleteBank, getBankStats } from './db/banks';
@@ -25,12 +26,67 @@ if (started) app.quit();
 let mainWindow: BrowserWindow | null = null;
 const SPLASH_MS = 5000;
 
+const DEFAULT_WIDTH = 1280;
+const DEFAULT_HEIGHT = 900;
+const MIN_WIDTH = 900;
+const MIN_HEIGHT = 650;
+
+interface WindowState {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+  maximized: boolean;
+}
+
+function windowStateFile() {
+  return path.join(app.getPath('userData'), 'window-state.json');
+}
+
+function loadWindowState(): WindowState {
+  try {
+    const raw = readFileSync(windowStateFile(), 'utf8');
+    const s = JSON.parse(raw) as WindowState;
+    // Validate saved bounds are on an available display
+    const displays = screen.getAllDisplays();
+    const onScreen = displays.some(d => {
+      const b = d.workArea;
+      return (s.x ?? 0) < b.x + b.width &&
+             (s.x ?? 0) + s.width > b.x &&
+             (s.y ?? 0) < b.y + b.height &&
+             (s.y ?? 0) + s.height > b.y;
+    });
+    if (!onScreen) return { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, maximized: false };
+    return s;
+  } catch {
+    return { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, maximized: false };
+  }
+}
+
+function saveWindowState(win: BrowserWindow): void {
+  try {
+    const maximized = win.isMaximized();
+    const bounds = win.getNormalBounds();
+    writeFileSync(windowStateFile(), JSON.stringify({
+      x: bounds.x,
+      y: bounds.y,
+      width: Math.max(bounds.width, MIN_WIDTH),
+      height: Math.max(bounds.height, MIN_HEIGHT),
+      maximized,
+    }));
+  } catch { /* ignore */ }
+}
+
 function createWindow() {
+  const state = loadWindowState();
+
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    minWidth: 900,
-    minHeight: 600,
+    x: state.x,
+    y: state.y,
+    width: state.width,
+    height: state.height,
+    minWidth: MIN_WIDTH,
+    minHeight: MIN_HEIGHT,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -38,6 +94,10 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
+
+  mainWindow.on('close', () => saveWindowState(mainWindow!));
+
+  if (state.maximized) mainWindow.maximize();
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
