@@ -6,9 +6,10 @@ interface Props {
   questionCount: number;
   onStart: (config: QuizStartConfig) => void;
   onCancel: () => void;
+  initialPracticeIds?: number[];
 }
 
-export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
+export function QuizSetup({ bankId, questionCount, onStart, onCancel, initialPracticeIds }: Props) {
   const [callMode, setCallMode] = useState<'normal' | 'waterfall' | 'practice'>('normal');
   const [dailyCount, setDailyCount] = useState('10');
   const [waterfallProgress, setWaterfallProgress] = useState<WaterfallProgress | null>(null);
@@ -38,6 +39,10 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
   const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialPracticeIds && initialPracticeIds.length > 0) setCallMode('practice');
+  }, []);
+
+  useEffect(() => {
     window.electronAPI.getWaterfallProgress(bankId).then(setWaterfallProgress);
   }, [bankId]);
 
@@ -46,7 +51,11 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
     setPracticeLoading(true);
     window.electronAPI.loadQuestions(bankId).then(qs => {
       setPracticeQuestions(qs);
-      setSelectedIds(new Set(qs.map(q => q.id)));
+      if (initialPracticeIds && initialPracticeIds.length > 0) {
+        setSelectedIds(new Set(initialPracticeIds));
+      } else {
+        setSelectedIds(new Set(qs.map(q => q.id)));
+      }
       setPracticeLoading(false);
     });
   }, [callMode, bankId]);
@@ -261,6 +270,16 @@ export function QuizSetup({ bankId, questionCount, onStart, onCancel }: Props) {
                     onClick={() => setSelectedIds(new Set())}
                   >
                     None
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ padding: '2px 10px', fontSize: 11 }}
+                    onClick={async () => {
+                      const flagged = await window.electronAPI.getFlaggedQuestions(bankId);
+                      setSelectedIds(new Set(flagged.map(f => f.questionId)));
+                    }}
+                  >
+                    🚩 Flagged
                   </button>
                 </div>
               )}

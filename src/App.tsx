@@ -10,12 +10,12 @@ import { GameCenter } from './components/GameCenter';
 import { Changelog } from './components/Changelog';
 import { StatusBar } from './components/StatusBar';
 import { AI_SERVICES, type AiService } from './browser/services';
-import type { QuestionBank } from './types';
+import type { QuestionBank, QuizStartConfig } from './types';
 
 type AppView =
   | { screen: 'library'; selectedBankId: number | null }
   | { screen: 'import' }
-  | { screen: 'quiz'; bankId: number }
+  | { screen: 'quiz'; bankId: number; initialPracticeIds?: number[]; retakeConfig?: QuizStartConfig }
   | { screen: 'results'; attemptId: number; bankId: number }
   | { screen: 'history'; bankId: number }
   | { screen: 'flagged'; bankId: number }
@@ -24,6 +24,7 @@ type AppView =
 
 export function App() {
   const [banks, setBanks] = useState<QuestionBank[]>([]);
+  const [lastQuizConfig, setLastQuizConfig] = useState<QuizStartConfig | null>(null);
   const [view, setView] = useState<AppView>({ screen: 'library', selectedBankId: null });
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeService, setActiveService] = useState<AiService | null>(null);
@@ -114,6 +115,9 @@ export function App() {
         {view.screen === 'quiz' && (
           <ActiveQuiz
             bankId={view.bankId}
+            initialPracticeIds={view.initialPracticeIds}
+            retakeConfig={view.retakeConfig}
+            onQuizStart={setLastQuizConfig}
             onComplete={(attemptId) => setView({ screen: 'results', attemptId, bankId: view.bankId })}
             onCancel={() => setView({ screen: 'library', selectedBankId: view.bankId })}
           />
@@ -122,7 +126,7 @@ export function App() {
           <Results
             attemptId={view.attemptId}
             bankId={view.bankId}
-            onRetake={() => setView({ screen: 'quiz', bankId: view.bankId })}
+            onRetake={() => setView({ screen: 'quiz', bankId: view.bankId, retakeConfig: lastQuizConfig ?? undefined })}
             onBack={() => setView({ screen: 'library', selectedBankId: view.bankId })}
           />
         )}
@@ -136,6 +140,7 @@ export function App() {
           <FlaggedLog
             bankId={view.bankId}
             onBack={() => setView({ screen: 'library', selectedBankId: view.bankId })}
+            onPractice={(ids) => setView({ screen: 'quiz', bankId: view.bankId, initialPracticeIds: ids })}
           />
         )}
         {view.screen === 'games' && (

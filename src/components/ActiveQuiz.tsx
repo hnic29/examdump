@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useReducer, useRef } from 'react';
+import React, { useState, useEffect, useReducer, useRef, useCallback } from 'react';
 import { QuizSetup } from './QuizSetup';
 import { AnswerFeedback } from './AnswerFeedback';
 import { useTimer } from '../hooks/useTimer';
@@ -109,9 +109,12 @@ interface Props {
   bankId: number;
   onComplete: (attemptId: number) => void;
   onCancel: () => void;
+  initialPracticeIds?: number[];
+  retakeConfig?: QuizStartConfig;
+  onQuizStart?: (config: QuizStartConfig) => void;
 }
 
-export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
+export function ActiveQuiz({ bankId, onComplete, onCancel, initialPracticeIds, retakeConfig, onQuizStart }: Props) {
   const [state, dispatch] = useReducer(reducer, {
     phase: 'setup',
     questions: [],
@@ -193,6 +196,14 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
     }
   }, [state.currentIndex, state.phase]);
 
+  useEffect(() => {
+    if (checkingResume || !retakeConfig || state.phase !== 'setup') return;
+    const start = async () => {
+      if (resumeAttempt) await window.electronAPI.deleteAttempt(resumeAttempt.id);
+      handleStart(retakeConfig);
+    };
+    start();
+  }, [checkingResume]);
   const handleContinue = async () => {
     if (!resumeAttempt) return;
     const all = await window.electronAPI.loadQuestions(bankId);
@@ -225,7 +236,7 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
     setResumeAttempt(null);
   };
 
-  const handleStart = async (cfg: QuizStartConfig) => {
+  const handleStart = useCallback(async (cfg: QuizStartConfig) => {
     const allQuestions = await window.electronAPI.loadQuestions(bankId);
     let questions: Question[];
 
@@ -265,8 +276,8 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
     }});
 
     if (cfg.totalTimeLimit) { totalTimer.reset(cfg.totalTimeLimit); totalTimer.start(); }
-  };
-
+    onQuizStart?.(cfg);
+  }, [bankId, onQuizStart]);
   const submitAnswer = async (question: Question, answers: string[]) => {
     if (!state.attemptId || submittingRef.current) return;
     submittingRef.current = true;
@@ -364,7 +375,7 @@ export function ActiveQuiz({ bankId, onComplete, onCancel }: Props) {
   }
 
   if (state.phase === 'setup') {
-    return <QuizSetup bankId={bankId} questionCount={questionCount} onStart={handleStart} onCancel={onCancel} />;
+    return <QuizSetup bankId={bankId} questionCount={questionCount} onStart={handleStart} onCancel={onCancel} initialPracticeIds={initialPracticeIds} />;
   }
 
   const isComplete = state.currentIndex >= state.questions.length;

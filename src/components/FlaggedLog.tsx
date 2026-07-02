@@ -4,9 +4,10 @@ import type { FlaggedQuestion } from '../types';
 interface Props {
   bankId: number;
   onBack: () => void;
+  onPractice?: (questionIds: number[]) => void;
 }
 
-export function FlaggedLog({ bankId, onBack }: Props) {
+export function FlaggedLog({ bankId, onBack, onPractice }: Props) {
   const [flagged, setFlagged] = useState<FlaggedQuestion[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,6 +32,15 @@ export function FlaggedLog({ bankId, onBack }: Props) {
         <h2 style={{ margin: 0 }}>Flagged for Review</h2>
         {!loading && (
           <span style={{ color: '#8b9cb0', fontSize: 13 }}>{flagged.length} question{flagged.length !== 1 ? 's' : ''}</span>
+        )}
+        {!loading && flagged.length > 0 && onPractice && (
+          <button
+            className="btn btn-primary"
+            style={{ marginLeft: 'auto' }}
+            onClick={() => onPractice(flagged.map(f => f.questionId))}
+          >
+            Practice Flagged
+          </button>
         )}
       </div>
 
