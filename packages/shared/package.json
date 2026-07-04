@@ -1,0 +1,13 @@
+{
+  "name": "@examdump/shared",
+  "version": "1.7.0",
+  "private": true,
+  "description": "Platform-agnostic UI, hooks, and data-layer code shared by the desktop and web ExamDump apps",
+  "scripts": {
+    "lint": "eslint --ext .ts,.tsx .",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "better-sqlite3": "^12.10.0"
+  }
+}

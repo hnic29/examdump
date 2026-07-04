@@ -1,0 +1,46 @@
+{
+  "name": "@examdump/desktop",
+  "productName": "ExamDump",
+  "version": "1.7.0",
+  "description": "Desktop exam-prep and quiz application",
+  "main": ".vite/build/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish",
+    "lint": "eslint --ext .ts,.tsx .",
+    "test": "vitest run --passWithNoTests",
+    "rebuild": "electron-rebuild -f -w better-sqlite3"
+  },
+  "keywords": [],
+  "author": {
+    "name": "hnic29",
+    "email": "percyb25@protonmail.com"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.2",
+    "@electron-forge/maker-deb": "^7.11.2",
+    "@electron-forge/maker-rpm": "^7.11.2",
+    "@electron-forge/maker-squirrel": "^7.11.2",
+    "@electron-forge/maker-zip": "^7.11.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.11.2",
+    "@electron-forge/plugin-fuses": "^7.11.2",
+    "@electron-forge/plugin-vite": "^7.11.2",
+    "@electron/fuses": "^1.8.0",
+    "@electron/rebuild": "^4.0.4",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/electron-squirrel-startup": "^1.0.2",
+    "@types/pdf-parse": "^1.1.5",
+    "electron": "42.3.3",
+    "electron-rebuild": "^3.2.9"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "electron-squirrel-startup": "^1.0.1",
+    "mammoth": "^1.12.0",
+    "pdf-parse": "^2.4.5"
+  }
+}
